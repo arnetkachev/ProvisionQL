@@ -55,8 +55,11 @@ enum PlistParser {
     static func extractAppInfo(from plist: [String: Any]) -> AppInfo {
         let bundleIdentifier = plist["CFBundleIdentifier"] as? String ?? "Unknown"
         let name = extractAppName(from: plist)
-        let version = plist["CFBundleShortVersionString"] as? String ?? "1.0"
-        let buildNumber = plist["CFBundleVersion"] as? String ?? "1"
+        // Fall back between the real version fields instead of inventing values.
+        let shortVersion = plist["CFBundleShortVersionString"] as? String
+        let bundleVersion = plist["CFBundleVersion"] as? String
+        let version = shortVersion ?? bundleVersion ?? "Unknown"
+        let buildNumber = bundleVersion ?? version
         let deviceFamily = extractDeviceFamily(from: plist)
         let minimumOSVersion = extractMinimumOSVersion(from: plist)
         let sdkVersion = extractSDKVersion(from: plist)
