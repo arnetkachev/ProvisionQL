@@ -68,7 +68,9 @@ struct ContentView: View {
         panel.allowedContentTypes = PreviewSupportedContentTypes.all
         panel.allowsMultipleSelection = false
         panel.canChooseFiles = true
-        panel.canChooseDirectories = true
+        // Packages (.xcarchive, .appex) stay selectable via allowedContentTypes;
+        // this only filters out arbitrary plain folders.
+        panel.canChooseDirectories = false
 
         guard panel.runModal() == .OK, let url = panel.url else {
             return
