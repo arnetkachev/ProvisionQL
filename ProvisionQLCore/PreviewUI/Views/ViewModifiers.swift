@@ -93,6 +93,6 @@ enum UIConstants {
     }
 
     enum Color {
-        static let validGreen = SwiftUI.Color(red: 0.0, green: 0.6, blue: 0.0)
+        static let validGreen = SwiftUI.Color(nsColor: .systemGreen)
     }
 }
