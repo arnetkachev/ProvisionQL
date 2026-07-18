@@ -33,7 +33,7 @@ struct AppArchivePreviewView: View {
                 }
             }
 
-            if appInfo.hasEmbeddedProfile, let profile = appInfo.embeddedProvisioningProfile {
+            if let profile = appInfo.embeddedProvisioningProfile {
                 Divider()
                 EmbeddedProvisioningProfileSection(profile: profile)
             }

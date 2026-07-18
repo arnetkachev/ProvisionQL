@@ -58,7 +58,4 @@ public extension AppInfo {
         }
     }
 
-    var hasEmbeddedProfile: Bool {
-        embeddedProvisioningProfile != nil
-    }
 }

@@ -83,8 +83,8 @@ struct AppArchiveTests {
                 buildNumber: "1"
             )
 
-            #expect(withProfile.hasEmbeddedProfile == true)
-            #expect(withoutProfile.hasEmbeddedProfile == false)
+            #expect(withProfile.embeddedProvisioningProfile != nil)
+            #expect(withoutProfile.embeddedProvisioningProfile == nil)
         }
     }
 
