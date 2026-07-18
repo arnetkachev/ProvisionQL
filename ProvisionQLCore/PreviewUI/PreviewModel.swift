@@ -8,8 +8,8 @@ import UniformTypeIdentifiers
 public final class PreviewModel {
     var content: PreviewContent = .loading
 
-    // Guards against overlapping requests in the host app: only the latest
-    // request may publish its result.
+    /// Guards against overlapping requests in the host app: only the latest
+    /// request may publish its result.
     private var requestID = 0
 
     public init() {}

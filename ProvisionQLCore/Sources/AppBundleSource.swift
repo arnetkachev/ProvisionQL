@@ -236,8 +236,8 @@ struct DirectoryAppBundleSource: AppBundleSource {
         return appBundleURL
     }
 
-    // Container-root lookups only make sense for IPA archives; there is no
-    // meaningful root outside the bundle for a directory source.
+    /// Container-root lookups only make sense for IPA archives; there is no
+    /// meaningful root outside the bundle for a directory source.
     private func url(for path: String, relativeToBundle: Bool) -> URL? {
         guard relativeToBundle else {
             return nil

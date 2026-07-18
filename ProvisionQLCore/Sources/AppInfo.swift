@@ -57,5 +57,4 @@ public extension AppInfo {
             version
         }
     }
-
 }
