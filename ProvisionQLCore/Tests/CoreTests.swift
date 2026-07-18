@@ -607,6 +607,57 @@ struct CoreTests {
             #expect(MachOEntitlementsReader.extractEntitlements(from: data) == nil)
         }
 
+        @Test("Rejects superblobs with impossible index entry counts")
+        func rejectsImpossibleSuperblobIndexCount() {
+            var codeSignature = Data()
+            codeSignature.appendBigEndianUInt32(0xFADE_0CC0)
+            codeSignature.appendBigEndianUInt32(12)
+            codeSignature.appendBigEndianUInt32(UInt32.max)
+
+            var data = createMachOHeader(loadCommandCount: 1, loadCommandsSize: 16)
+            data.appendLittleEndianUInt32(0x1D)
+            data.appendLittleEndianUInt32(16)
+            data.appendLittleEndianUInt32(48)
+            data.appendLittleEndianUInt32(UInt32(codeSignature.count))
+            data.append(codeSignature)
+
+            #expect(MachOEntitlementsReader.extractEntitlements(from: data) == nil)
+        }
+
+        @Test("Rejects index entries outside the superblob's declared length")
+        func rejectsEntriesBeyondDeclaredLength() throws {
+            let plistData = try PropertyListSerialization.data(
+                fromPropertyList: ["get-task-allow": true],
+                format: .xml,
+                options: 0
+            )
+
+            var entitlementsBlob = Data()
+            entitlementsBlob.appendBigEndianUInt32(0xFADE_7171)
+            entitlementsBlob.appendBigEndianUInt32(UInt32(8 + plistData.count))
+            entitlementsBlob.append(plistData)
+
+            // The superblob declares a length of 12 bytes, but the index entry
+            // and entitlements blob sit beyond that. Nothing outside the
+            // declared length may be parsed.
+            var codeSignature = Data()
+            codeSignature.appendBigEndianUInt32(0xFADE_0CC0)
+            codeSignature.appendBigEndianUInt32(12)
+            codeSignature.appendBigEndianUInt32(1)
+            codeSignature.appendBigEndianUInt32(5)
+            codeSignature.appendBigEndianUInt32(20)
+            codeSignature.append(entitlementsBlob)
+
+            var data = createMachOHeader(loadCommandCount: 1, loadCommandsSize: 16)
+            data.appendLittleEndianUInt32(0x1D)
+            data.appendLittleEndianUInt32(16)
+            data.appendLittleEndianUInt32(48)
+            data.appendLittleEndianUInt32(UInt32(codeSignature.count))
+            data.append(codeSignature)
+
+            #expect(MachOEntitlementsReader.extractEntitlements(from: data) == nil)
+        }
+
         @Test("Rejects short code signature load commands")
         func rejectsShortCodeSignatureLoadCommand() {
             var data = createMachOHeader(loadCommandCount: 1, loadCommandsSize: 12)

@@ -196,10 +196,16 @@ private extension MachOEntitlementsReader {
         }
 
         guard magic == csMagicEmbeddedSignature,
-              let count = data.uint32(at: range.lowerBound + 8, endianness: .big)
+              let declaredLength = data.uint32(at: range.lowerBound + 4, endianness: .big),
+              declaredLength >= 12,
+              Int(declaredLength) <= range.count,
+              let count = data.uint32(at: range.lowerBound + 8, endianness: .big),
+              Int(count) <= (Int(declaredLength) - 12) / 8
         else {
             return nil
         }
+
+        let blobLimit = range.lowerBound + Int(declaredLength)
 
         for index in 0 ..< Int(count) {
             let entryOffset = range.lowerBound + 12 + index * 8
@@ -211,12 +217,12 @@ private extension MachOEntitlementsReader {
             }
 
             let absoluteBlobOffset = range.lowerBound + Int(blobOffset)
-            guard absoluteBlobOffset < range.upperBound else {
+            guard absoluteBlobOffset < blobLimit else {
                 continue
             }
 
             if type == csSlotEntitlements,
-               let entitlements = parseEntitlementsBlob(in: data, at: absoluteBlobOffset, limit: range.upperBound)
+               let entitlements = parseEntitlementsBlob(in: data, at: absoluteBlobOffset, limit: blobLimit)
             {
                 return entitlements
             }
@@ -259,7 +265,7 @@ private extension Data {
     }
 
     func uint32(at offset: Int, endianness: MachOEntitlementsReader.Endianness) -> UInt32? {
-        guard bounds.contains(offset), offset + 4 <= count else {
+        guard bounds.contains(offset), offset + 4 <= endIndex else {
             return nil
         }
 
@@ -276,7 +282,7 @@ private extension Data {
     }
 
     func uint64(at offset: Int, endianness: MachOEntitlementsReader.Endianness) -> UInt64? {
-        guard bounds.contains(offset), offset + 8 <= count else {
+        guard bounds.contains(offset), offset + 8 <= endIndex else {
             return nil
         }
 
