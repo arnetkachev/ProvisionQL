@@ -9,6 +9,7 @@ import Foundation
 public struct AppInfo: Sendable, Codable, Hashable {
     public let name: String
     public let bundleIdentifier: String
+    public let appleID: String?
     public let version: String
     public let buildNumber: String
     public let embeddedProvisioningProfile: ProvisioningInfo?
@@ -24,6 +25,7 @@ public struct AppInfo: Sendable, Codable, Hashable {
         bundleIdentifier: String,
         version: String,
         buildNumber: String,
+        appleID: String? = nil,
         embeddedProvisioningProfile: ProvisioningInfo? = nil,
         entitlements: [String: PlistValue] = [:],
         deviceFamily: [String] = [],
@@ -34,6 +36,7 @@ public struct AppInfo: Sendable, Codable, Hashable {
     ) {
         self.name = name
         self.bundleIdentifier = bundleIdentifier
+        self.appleID = appleID
         self.version = version
         self.buildNumber = buildNumber
         self.embeddedProvisioningProfile = embeddedProvisioningProfile

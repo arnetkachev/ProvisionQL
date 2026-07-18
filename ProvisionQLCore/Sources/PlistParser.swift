@@ -37,6 +37,16 @@ enum PlistParser {
         return try parse(data: data)
     }
 
+    static func extractAppleID(from plist: [String: Any]) -> String? {
+        let downloadInfo = plist["com.apple.iTunesStore.downloadInfo"] as? [String: Any]
+        let accountInfo = downloadInfo?["accountInfo"] as? [String: Any]
+        let nestedAppleID = accountInfo?["AppleID"] as? String
+
+        return [nestedAppleID, plist["apple-id"] as? String, plist["appleId"] as? String]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
+    }
+
     // MARK: - App Info Extraction
 
     /// Extracts app information from an Info.plist dictionary

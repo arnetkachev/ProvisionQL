@@ -30,7 +30,15 @@ public enum AppArchiveParser {
 private extension AppArchiveParser {
     static func parseIPA(_ url: URL) throws -> AppArchiveParseResult {
         let source = try IPAAppBundleSource(url: url)
-        return try parseApp(from: source)
+        let appleID = try? source.data(
+            at: "iTunesMetadata.plist",
+            relativeToBundle: false,
+            caseInsensitive: false
+        ).flatMap { data in
+            try PlistParser.extractAppleID(from: PlistParser.parse(data: data))
+        }
+
+        return try parseApp(from: source, appleID: appleID)
     }
 
     static func parseXCArchive(_ url: URL) throws -> AppArchiveParseResult {
@@ -58,7 +66,11 @@ private extension AppArchiveParser {
         return try parseApp(from: source, isAppExtension: true)
     }
 
-    static func parseApp(from source: AppBundleSource, isAppExtension: Bool = false) throws -> AppArchiveParseResult {
+    static func parseApp(
+        from source: AppBundleSource,
+        appleID: String? = nil,
+        isAppExtension: Bool = false
+    ) throws -> AppArchiveParseResult {
         let plist = try source.infoPlist()
 
         let parsedAppInfo = PlistParser.extractAppInfo(from: plist)
@@ -89,6 +101,7 @@ private extension AppArchiveParser {
             bundleIdentifier: parsedAppInfo.bundleIdentifier,
             version: parsedAppInfo.version,
             buildNumber: parsedAppInfo.buildNumber,
+            appleID: appleID,
             embeddedProvisioningProfile: embeddedProfile.profile,
             entitlements: entitlements,
             deviceFamily: parsedAppInfo.deviceFamily,

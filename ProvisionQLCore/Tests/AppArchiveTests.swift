@@ -39,6 +39,7 @@ struct AppArchiveTests {
 
             #expect(appInfo.name == "Test App")
             #expect(appInfo.bundleIdentifier == "com.test.app")
+            #expect(appInfo.appleID == nil)
             #expect(appInfo.version == "1.0.0")
             #expect(appInfo.buildNumber == "100")
             #expect(appInfo.embeddedProvisioningProfile?.name == mockProfile.name)
@@ -127,14 +128,42 @@ struct AppArchiveTests {
 
             #expect(appInfo.name == "Test App Display")
             #expect(appInfo.bundleIdentifier == "com.test.app")
+            #expect(appInfo.appleID == nil)
             #expect(appInfo.diagnostics.isEmpty)
+        }
+
+        @Test("Apple ID metadata uses supported keys in precedence order")
+        func appleIDMetadataPrecedence() {
+            #expect(PlistParser.extractAppleID(from: [
+                "com.apple.iTunesStore.downloadInfo": [
+                    "accountInfo": ["AppleID": "  primary@example.com\n"]
+                ],
+                "apple-id": "fallback@example.com",
+                "appleId": "legacy@example.com"
+            ]) == "primary@example.com")
+
+            #expect(PlistParser.extractAppleID(from: [
+                "com.apple.iTunesStore.downloadInfo": [
+                    "accountInfo": ["AppleID": " \n"]
+                ],
+                "apple-id": " fallback@example.com ",
+                "appleId": "legacy@example.com"
+            ]) == "fallback@example.com")
+
+            #expect(PlistParser.extractAppleID(from: [
+                "apple-id": "",
+                "appleId": " legacy@example.com "
+            ]) == "legacy@example.com")
+
+            #expect(PlistParser.extractAppleID(from: ["apple-id": 123]) == nil)
         }
 
         @Test("Parser treats TIPA archives as IPAs")
         func parserTreatsTIPAArchivesAsIPAs() throws {
             let ipaURL = createTempZipArchive(
                 withFiles: [
-                    "Payload/TestApp.app/Info.plist": createMockInfoPlistData()
+                    "Payload/TestApp.app/Info.plist": createMockInfoPlistData(),
+                    "iTunesMetadata.plist": createMockITunesMetadataPlistData()
                 ],
                 extension: "ipa"
             )
@@ -148,6 +177,23 @@ struct AppArchiveTests {
             let tipaInfo = try AppArchiveParser.parse(tipaURL)
 
             #expect(tipaInfo == ipaInfo)
+            #expect(tipaInfo.appleID == "primary@example.com")
+        }
+
+        @Test("Parser ignores malformed iTunes metadata")
+        func parserIgnoresMalformedITunesMetadata() throws {
+            let tempURL = createTempZipArchive(
+                withFiles: [
+                    "Payload/TestApp.app/Info.plist": createMockInfoPlistData(),
+                    "iTunesMetadata.plist": Data("not a plist".utf8)
+                ],
+                extension: "ipa"
+            )
+            defer { try? FileManager.default.removeItem(at: tempURL) }
+
+            let appInfo = try AppArchiveParser.parse(tempURL)
+
+            #expect(appInfo.appleID == nil)
         }
 
         @Test("Icon extractor treats TIPA archives as IPAs")
@@ -372,6 +418,16 @@ private func createMockInfoPlistData(
         "DTSDKName": "iphoneos18.0",
         "DTPlatformVersion": "18.0",
         "CFBundleSupportedPlatforms": ["iPhoneOS"]
+    ]
+
+    return try! PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+}
+
+private func createMockITunesMetadataPlistData() -> Data {
+    let plist: [String: Any] = [
+        "com.apple.iTunesStore.downloadInfo": [
+            "accountInfo": ["AppleID": "primary@example.com"]
+        ]
     ]
 
     return try! PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
