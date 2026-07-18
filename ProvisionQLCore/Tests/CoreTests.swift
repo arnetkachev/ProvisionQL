@@ -301,6 +301,10 @@ struct CoreTests {
                 platformStrings: ["iOS", "macOS"],
                 expected: [ProvisioningInfo.Platform.iOS, ProvisioningInfo.Platform.macOS]
             ),
+            (
+                platformStrings: ["iOS", "xrOS", "visionOS"],
+                expected: [ProvisioningInfo.Platform.iOS, ProvisioningInfo.Platform.visionOS]
+            ),
             (platformStrings: ["unknown"], expected: [ProvisioningInfo.Platform.unknown("unknown")]),
             (platformStrings: nil, expected: [ProvisioningInfo.Platform.iOS])
         ])
@@ -602,6 +606,30 @@ struct CoreTests {
             let decoded = try PropertyListDecoder().decode(PlistValue.self, from: data)
 
             #expect(decoded == original)
+        }
+    }
+
+    @Suite("Icon Name Detection Tests")
+    struct IconNameDetectionTests {
+        @Test("CFBundleIconName is used when no icon file list is declared")
+        func iconNameFallback() {
+            let plist: [String: Any] = [
+                "CFBundleIcons": ["CFBundlePrimaryIcon": ["CFBundleIconName": "CustomIcon"]]
+            ]
+
+            #expect(IconExtractor.findMainIconName(in: plist) == "CustomIcon")
+        }
+
+        @Test("Icon file list wins over CFBundleIconName")
+        func iconFileListPrecedence() {
+            let plist: [String: Any] = [
+                "CFBundleIcons": ["CFBundlePrimaryIcon": [
+                    "CFBundleIconName": "CustomIcon",
+                    "CFBundleIconFiles": ["AppIcon60x60"]
+                ]]
+            ]
+
+            #expect(IconExtractor.findMainIconName(in: plist) == "AppIcon60x60")
         }
     }
 

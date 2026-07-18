@@ -132,6 +132,42 @@ struct AppArchiveTests {
             #expect(appInfo.diagnostics.isEmpty)
         }
 
+        @Test("Parser ignores nested app bundles listed before the main app")
+        func parserIgnoresNestedAppBundles() throws {
+            let tempURL = URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("ipa")
+            defer { try? FileManager.default.removeItem(at: tempURL) }
+
+            // A re-zipped IPA can list the nested Watch bundle before the main app.
+            let archive = try Archive(url: tempURL, accessMode: .create)
+            try archive.addEntry(
+                with: "Payload/TestApp.app/Watch/WatchApp.app/",
+                type: .directory,
+                uncompressedSize: Int64(0)
+            ) { _, _ in Data() }
+            try archive.addEntry(
+                with: "Payload/TestApp.app/",
+                type: .directory,
+                uncompressedSize: Int64(0)
+            ) { _, _ in Data() }
+
+            let plistData = createMockInfoPlistData()
+            try archive.addEntry(
+                with: "Payload/TestApp.app/Info.plist",
+                type: .file,
+                uncompressedSize: Int64(plistData.count)
+            ) { (position: Int64, size: Int) in
+                let start = Int(position)
+                return plistData.subdata(in: start ..< min(start + size, plistData.count))
+            }
+
+            let appInfo = try AppArchiveParser.parse(tempURL)
+
+            #expect(appInfo.name == "Test App Display")
+            #expect(appInfo.bundleIdentifier == "com.test.app")
+        }
+
         @Test("Apple ID metadata uses supported keys in precedence order")
         func appleIDMetadataPrecedence() {
             #expect(PlistParser.extractAppleID(from: [
