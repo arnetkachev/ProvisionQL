@@ -8,9 +8,16 @@ import UniformTypeIdentifiers
 public final class PreviewModel {
     var content: PreviewContent = .loading
 
+    // Guards against overlapping requests in the host app: only the latest
+    // request may publish its result.
+    private var requestID = 0
+
     public init() {}
 
     public func previewRequested(for url: URL) async {
+        requestID += 1
+        let currentRequestID = requestID
+
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
             if accessing {
@@ -20,11 +27,16 @@ public final class PreviewModel {
 
         content = .loading
 
+        let newContent: PreviewContent
         do {
-            content = try await Self.loadContent(for: url)
+            newContent = try await Self.loadContent(for: url)
         } catch {
             let fileInfo = await Self.fileInfo(for: url)
-            content = .failed(PreviewFailure(error: error), fileInfo)
+            newContent = .failed(PreviewFailure(error: error), fileInfo)
+        }
+
+        if currentRequestID == requestID {
+            content = newContent
         }
     }
 }
