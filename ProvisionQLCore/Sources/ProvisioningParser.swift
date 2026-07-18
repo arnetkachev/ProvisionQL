@@ -94,13 +94,17 @@ private extension ProvisioningParser {
                 }
                 bestStatus = .signed
             case .unsigned:
-                bestStatus = .unsigned
+                if bestStatus != .signed {
+                    bestStatus = .unsigned
+                }
             case .invalidSignature:
                 return .invalidSignature
             case .invalidCert:
                 return .invalidCertificate
             case .needsDetachedContent:
-                bestStatus = .needsDetachedContent
+                if bestStatus != .signed {
+                    bestStatus = .needsDetachedContent
+                }
             case .invalidIndex:
                 continue
             default:
