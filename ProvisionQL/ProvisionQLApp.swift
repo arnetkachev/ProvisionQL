@@ -12,8 +12,8 @@ struct ProvisionQLApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
-        WindowGroup {
-            ContentView(model: appDelegate.model)
+        WindowGroup(for: URL.self) { $url in
+            ContentView(fileURL: url)
         }
         .commands {
             CommandGroup(replacing: .appInfo) {
@@ -27,15 +27,28 @@ struct ProvisionQLApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    let model = HostAppModel()
-
     func application(_: NSApplication, open urls: [URL]) {
-        guard let url = urls.first else {
-            return
-        }
+        FileOpenRequests.shared.add(urls)
+    }
+}
 
-        Task {
-            await model.previewRequested(for: url)
-        }
+/// Finder open events arrive on the app delegate, which has no access to the
+/// SwiftUI openWindow action. Requests are queued here and drained take-once
+/// by the first window that reacts, so each file opens exactly once.
+@MainActor
+final class FileOpenRequests {
+    static let shared = FileOpenRequests()
+    static let notification = Notification.Name("ProvisionQLFileOpenRequests")
+
+    private var pendingURLs: [URL] = []
+
+    func add(_ urls: [URL]) {
+        pendingURLs.append(contentsOf: urls)
+        NotificationCenter.default.post(name: Self.notification, object: nil)
+    }
+
+    func take() -> [URL] {
+        defer { pendingURLs.removeAll() }
+        return pendingURLs
     }
 }

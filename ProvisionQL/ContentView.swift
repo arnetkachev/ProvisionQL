@@ -5,12 +5,15 @@
 //  Created by Evgeny Aleksandrov
 
 import AppKit
+import Combine
 import PreviewUI
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    let model: HostAppModel
+    let fileURL: URL?
+    @State private var model = HostAppModel()
+    @Environment(\.openWindow) private var openWindow
     @AppStorage("extensionHintDismissed") private var extensionHintDismissed = false
     @State private var isDropTargeted = false
 
@@ -45,6 +48,17 @@ struct ContentView: View {
             )
         }
         .frame(minWidth: 720, minHeight: 520)
+        .task(id: fileURL) {
+            if let fileURL {
+                await model.previewRequested(for: fileURL)
+            }
+        }
+        .onAppear(perform: drainFileOpenRequests)
+        .onReceive(
+            NotificationCenter.default.publisher(for: FileOpenRequests.notification)
+        ) { _ in
+            drainFileOpenRequests()
+        }
         .navigationTitle(model.windowTitle)
         .toolbar {
             ToolbarItemGroup {
@@ -61,6 +75,24 @@ struct ContentView: View {
 
     private func dismissExtensionHint() {
         extensionHintDismissed = true
+    }
+
+    private func drainFileOpenRequests() {
+        var urls = FileOpenRequests.shared.take()
+        guard !urls.isEmpty else {
+            return
+        }
+
+        if !model.hasOpenedFile {
+            let first = urls.removeFirst()
+            Task {
+                await model.previewRequested(for: first)
+            }
+        }
+
+        for url in urls {
+            openWindow(value: url)
+        }
     }
 
     private func openFile() {
@@ -205,5 +237,5 @@ private struct EmptyStateView: View {
 }
 
 #Preview {
-    ContentView(model: HostAppModel())
+    ContentView(fileURL: nil)
 }
