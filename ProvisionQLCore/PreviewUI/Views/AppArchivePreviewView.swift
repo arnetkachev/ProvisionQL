@@ -22,7 +22,7 @@ struct AppArchivePreviewView: View {
 
             if !appInfo.diagnostics.isEmpty {
                 PreviewSection(title: "Diagnostics") {
-                    DiagnosticsView(diagnostics: appInfo.diagnostics)
+                    DiagnosticsView(messages: appInfo.diagnostics.map(\.message))
                 }
             }
 

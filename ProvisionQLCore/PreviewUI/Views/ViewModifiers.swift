@@ -6,60 +6,18 @@
 
 import SwiftUI
 
-struct SectionBackgroundModifier: ViewModifier {
-    let verticalPadding: CGFloat
-    let horizontalPadding: CGFloat
-    let cornerRadius: CGFloat
-
-    init(
-        verticalPadding: CGFloat = UIConstants.Padding.standard,
-        horizontalPadding: CGFloat = UIConstants.Padding.large,
-        cornerRadius: CGFloat = UIConstants.CornerRadius.standard
-    ) {
-        self.verticalPadding = verticalPadding
-        self.horizontalPadding = horizontalPadding
-        self.cornerRadius = cornerRadius
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .padding(.vertical, verticalPadding)
-            .padding(.horizontal, horizontalPadding)
+extension View {
+    func sectionBackground() -> some View {
+        padding(.vertical, UIConstants.Padding.standard)
+            .padding(.horizontal, UIConstants.Padding.large)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(nsColor: .controlBackgroundColor))
-            .cornerRadius(cornerRadius)
-    }
-}
-
-struct CodeTextModifier: ViewModifier {
-    let size: Font.TextStyle
-
-    init(size: Font.TextStyle = .body) {
-        self.size = size
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .font(.system(size, design: .monospaced))
-            .textSelection(.enabled)
-    }
-}
-
-extension View {
-    func sectionBackground(
-        verticalPadding: CGFloat = UIConstants.Padding.standard,
-        horizontalPadding: CGFloat = UIConstants.Padding.large,
-        cornerRadius: CGFloat = UIConstants.CornerRadius.standard
-    ) -> some View {
-        modifier(SectionBackgroundModifier(
-            verticalPadding: verticalPadding,
-            horizontalPadding: horizontalPadding,
-            cornerRadius: cornerRadius
-        ))
+            .cornerRadius(UIConstants.CornerRadius.standard)
     }
 
     func codeText(_ size: Font.TextStyle = .body) -> some View {
-        modifier(CodeTextModifier(size: size))
+        font(.system(size, design: .monospaced))
+            .textSelection(.enabled)
     }
 }
 

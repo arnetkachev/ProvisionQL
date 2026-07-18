@@ -19,7 +19,7 @@ struct ProvisioningPreviewView: View {
 
             if !info.diagnostics.isEmpty {
                 PreviewSection(title: "Diagnostics") {
-                    DiagnosticsView(diagnostics: info.diagnostics)
+                    DiagnosticsView(messages: info.diagnostics.map(\.message))
                 }
             }
 
