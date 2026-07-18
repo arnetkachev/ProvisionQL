@@ -64,7 +64,7 @@ struct IPAAppBundleSource: AppBundleSource {
 
     init(url: URL) throws {
         archive = try Archive(url: url, accessMode: .read)
-        appBundlePath = try ArchiveUtilities.findAppBundlePath(in: archive, archiveType: .ipa)
+        appBundlePath = try ArchiveUtilities.findAppBundlePath(in: archive)
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 

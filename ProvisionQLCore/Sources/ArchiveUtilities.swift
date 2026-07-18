@@ -111,61 +111,25 @@ enum ArchiveUtilities {
 
     // MARK: - App Bundle Path Finding
 
-    /// Finds the app bundle path in an archive
-    /// - Parameters:
-    ///   - archive: The ZIP archive
-    ///   - archiveType: The type of archive (IPA or XCArchive)
-    /// - Returns: The app bundle path
+    /// Finds the top-level `Payload/*.app/` bundle path in an IPA archive.
+    /// Works whether or not the archive contains directory entries, and ignores
+    /// nested bundles like `Payload/App.app/Watch/WatchApp.app/`.
+    /// - Parameter archive: The ZIP archive
+    /// - Returns: The app bundle path including trailing slash
     /// - Throws: ParsingError if no app bundle is found
-    static func findAppBundlePath(in archive: Archive, archiveType: ArchiveType) throws -> String {
-        switch archiveType {
-        case .ipa:
-            // Look for Payload/*.app/
-            for entry in archive {
-                if entry.path.hasPrefix("Payload/"), entry.path.hasSuffix(".app/") {
-                    return entry.path
-                }
+    static func findAppBundlePath(in archive: Archive) throws -> String {
+        for entry in archive {
+            let components = entry.path.components(separatedBy: "/")
+            guard components.count >= 2,
+                  components[0] == "Payload",
+                  components[1].hasSuffix(".app")
+            else {
+                continue
             }
 
-            // Some IPA creators omit directory entries and only include files under Payload/*.app/.
-            if let appBundlePath = findAppBundlePathFlexible(in: archive) {
-                return appBundlePath + "/"
-            }
-        case .xcarchive:
-            // Look for Products/Applications/*.app/
-            for entry in archive {
-                if entry.path.hasPrefix("Products/Applications/"), entry.path.hasSuffix(".app/") {
-                    return entry.path
-                }
-            }
+            return "Payload/\(components[1])/"
         }
 
         throw ParsingError.invalidAppBundle
-    }
-
-    /// Finds the app bundle path in an IPA archive with more flexible matching
-    /// - Parameter archive: The ZIP archive
-    /// - Returns: The app bundle path if found, nil otherwise
-    static func findAppBundlePathFlexible(in archive: Archive) -> String? {
-        for entry in archive {
-            let path = entry.path
-            if path.hasPrefix("Payload/"), path.hasSuffix(".app/") {
-                return String(path.dropLast()) // Remove trailing slash
-            }
-            if path.hasPrefix("Payload/"), path.contains(".app/") {
-                let components = path.components(separatedBy: "/")
-                if let appIndex = components.firstIndex(where: { $0.hasSuffix(".app") }) {
-                    return components[0 ... appIndex].joined(separator: "/")
-                }
-            }
-        }
-        return nil
-    }
-
-    // MARK: - ArchiveType
-
-    enum ArchiveType {
-        case ipa
-        case xcarchive
     }
 }
