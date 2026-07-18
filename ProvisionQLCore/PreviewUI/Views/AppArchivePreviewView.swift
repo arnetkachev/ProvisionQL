@@ -51,6 +51,10 @@ struct AppArchivePreviewView: View {
             InfoRow(label: "Version", value: appInfo.displayVersion)
             InfoRow(label: "Bundle ID", value: appInfo.bundleIdentifier)
 
+            if let appleID = appInfo.appleID {
+                InfoRow(label: "Apple ID", value: appleID)
+            }
+
             if let extensionPointIdentifier = appInfo.extensionPointIdentifier {
                 InfoRow(label: "Extension Point", value: extensionPointIdentifier)
             }
