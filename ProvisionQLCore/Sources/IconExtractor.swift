@@ -119,28 +119,14 @@ extension IconExtractor {
 
         var allIconFiles: [String] = []
 
-        // Try CFBundleIcons (iOS 5.0+)
-        if let bundleIcons = plist["CFBundleIcons"] as? [String: Any],
-           let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any],
-           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String]
-        {
-            allIconFiles.append(contentsOf: iconFiles)
-        }
-
-        // Try CFBundleIcons~ipad
-        if let bundleIcons = plist["CFBundleIcons~ipad"] as? [String: Any],
-           let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any],
-           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String]
-        {
-            allIconFiles.append(contentsOf: iconFiles)
-        }
-
-        // Try CFBundleIcons~tv (tvOS)
-        if let bundleIcons = plist["CFBundleIcons~tv"] as? [String: Any],
-           let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any],
-           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String]
-        {
-            allIconFiles.append(contentsOf: iconFiles)
+        // Try CFBundleIcons (iOS 5.0+) and its per-device variants
+        for key in ["CFBundleIcons", "CFBundleIcons~ipad", "CFBundleIcons~tv"] {
+            if let bundleIcons = plist[key] as? [String: Any],
+               let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any],
+               let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String]
+            {
+                allIconFiles.append(contentsOf: iconFiles)
+            }
         }
 
         if !allIconFiles.isEmpty,
