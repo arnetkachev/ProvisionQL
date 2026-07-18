@@ -534,6 +534,33 @@ struct CoreTests {
             }
         }
 
+        @Test("PlistValue keeps NSNumber integers 0 and 1 as integers")
+        func plistValueNumberBridging() throws {
+            #expect(PlistValue.from(value: NSNumber(value: 0)) == .integer(0))
+            #expect(PlistValue.from(value: NSNumber(value: 1)) == .integer(1))
+            #expect(PlistValue.from(value: NSNumber(value: true)) == .bool(true))
+            #expect(PlistValue.from(value: NSNumber(value: false)) == .bool(false))
+            #expect(PlistValue.from(value: NSNumber(value: UInt64.max)) == .string("18446744073709551615"))
+
+            let plistXML = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0">
+            <dict>
+                <key>count</key><integer>1</integer>
+                <key>enabled</key><true/>
+            </dict>
+            </plist>
+            """
+            let parsed = try PropertyListSerialization.propertyList(
+                from: Data(plistXML.utf8),
+                options: [],
+                format: nil
+            )
+            let value = PlistValue.from(value: parsed)
+
+            #expect(value == .dictionary(["count": .integer(1), "enabled": .bool(true)]))
+        }
+
         @Test("PlistValue property list Codable conformance")
         func plistValueCodable() throws {
             let testCases: [PlistValue] = [

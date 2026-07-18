@@ -101,14 +101,10 @@ extension PlistValue {
             return plistValue
         case let stringValue as String:
             return .string(stringValue)
-        case let boolValue as Bool:
-            return .bool(boolValue)
-        case let intValue as Int64:
-            return .integer(intValue)
-        case let intValue as Int:
-            return .integer(Int64(intValue))
-        case let doubleValue as Double:
-            return .double(doubleValue)
+        // NSNumber must be matched before any numeric Swift type: bridging
+        // casts like `as Bool` succeed for any NSNumber holding 0 or 1, which
+        // would turn integer plist values into booleans. from(number:) tells
+        // CFBoolean and numbers apart by type ID instead.
         case let numberValue as NSNumber:
             return from(number: numberValue)
         case let dateValue as Date:
@@ -155,6 +151,8 @@ extension PlistValue {
         switch String(cString: number.objCType) {
         case "f", "d":
             return .double(number.doubleValue)
+        case "Q" where number.uint64Value > UInt64(Int64.max):
+            return .string(number.stringValue)
         default:
             return .integer(number.int64Value)
         }
