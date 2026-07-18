@@ -52,12 +52,12 @@
 * Removes application-bundle (`.app`) support ([#14](https://github.com/ealeksandrov/ProvisionQL/issues/14))
 * Fixes expiration status calculation ([#17](https://github.com/ealeksandrov/ProvisionQL/issues/17))
 * Fixes icons "IconFlavor" for apps thumbnails ([#2](https://github.com/ealeksandrov/ProvisionQL/issues/2))
-* Fixes wrong thumnails and previews for bundles with multiple plugin executables
+* Fixes wrong thumbnails and previews for bundles with multiple plugin executables
 * Improves app preview layout
 * Improves App Transport Security section formatting
 
 ## Version 1.3.0
-* Adds NSAppTransportSecurity, DTSDKName, and MinimumOSVersion ([#7](https://github.com/ealeksandrov/ProvisionQL/pull/7)
+* Adds NSAppTransportSecurity, DTSDKName, and MinimumOSVersion ([#7](https://github.com/ealeksandrov/ProvisionQL/pull/7))
 
 ## Version 1.2.0
 * Adds support for app extensions (`.appex`)
