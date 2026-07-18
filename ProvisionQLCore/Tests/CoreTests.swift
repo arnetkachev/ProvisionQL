@@ -63,8 +63,8 @@ struct CoreTests {
             #expect(badgeInfo.profileType == .development)
         }
 
-        @Test("BadgeInfo with zero devices")
-        func badgeInfoZeroDevices() throws {
+        @Test("BadgeInfo without device list has nil count")
+        func badgeInfoWithoutDeviceList() throws {
             let mockProfile = RawProfile(
                 UUID: "87654321-4321-4321-4321-ABCDEF123456",
                 Name: "App Store Profile",
@@ -83,7 +83,7 @@ struct CoreTests {
             let provisioningInfo = try ProvisioningInfo(from: mockProfile)
             let badgeInfo = BadgeInfo(from: provisioningInfo)
 
-            #expect(badgeInfo.deviceCount == 0)
+            #expect(badgeInfo.deviceCount == nil)
             #expect(badgeInfo.profileType == .appStore)
         }
     }

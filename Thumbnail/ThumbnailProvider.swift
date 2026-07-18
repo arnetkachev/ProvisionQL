@@ -151,7 +151,7 @@ private extension ThumbnailProvider {
         return image
     }
 
-    func drawDeviceBadge(deviceCount: Int, expirationStatus: ExpirationStatus, in context: CGContext, size: CGSize) {
+    func drawDeviceBadge(deviceCount: Int?, expirationStatus: ExpirationStatus, in context: CGContext, size: CGSize) {
         let badgeSize: CGFloat = min(size.width, size.height) * 0.2
         let badgeX: CGFloat = size.width * 0.2
         let badgeY = size.height - badgeSize - size.height * 0.2
@@ -165,7 +165,9 @@ private extension ThumbnailProvider {
             CGColor(red: 0.0, green: 0.7, blue: 0.0, alpha: 1.0) // Green
         }
 
-        let text = "\(deviceCount)"
+        // Profiles without a device list (App Store, Enterprise) get a plain
+        // status dot instead of a misleading "0".
+        let text = deviceCount.map(String.init) ?? ""
         let font = NSFont.boldSystemFont(ofSize: min(size.width, size.height) * 0.12)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
