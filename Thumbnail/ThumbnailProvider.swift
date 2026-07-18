@@ -24,11 +24,12 @@ class ThumbnailProvider: QLThumbnailProvider {
         switch fileExtension {
         case "mobileprovision", "provisionprofile":
             badgeInfo = try? ProvisioningParser.fetchBadgeInfo(from: url)
-            icon = getProvisioningIcon()
+            icon = placeholderIcon(symbolName: "gear", cornerRadius: 20)
             extensionBadge = "PROV"
 
         case "ipa", "tipa", "xcarchive", "appex":
-            icon = (try? IconExtractor.extractIcon(from: url)) ?? getDefaultAppIcon()
+            icon = (try? IconExtractor.extractIcon(from: url))
+                ?? placeholderIcon(symbolName: "app.dashed", cornerRadius: 56) // iOS-style rounded corners
             extensionBadge = fileExtension.uppercased()
 
         default:
@@ -73,7 +74,7 @@ private extension ThumbnailProvider {
         return true
     }
 
-    func getProvisioningIcon() -> NSImage {
+    func placeholderIcon(symbolName: String, cornerRadius: CGFloat) -> NSImage {
         let iconSize = NSSize(width: 256, height: 256)
         let image = NSImage(size: iconSize)
         image.lockFocus()
@@ -85,14 +86,14 @@ private extension ThumbnailProvider {
             y: 0 + padding,
             width: iconSize.width - padding * 2,
             height: iconSize.height - padding * 2
-        ), xRadius: 20, yRadius: 20)
+        ), xRadius: cornerRadius, yRadius: cornerRadius)
 
         // Fill white background
         NSColor.white.setFill()
         borderPath.fill()
 
         // SF Symbol
-        if let symbolImage = NSImage(systemSymbolName: "gear", accessibilityDescription: nil) {
+        if let symbolImage = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) {
             let symbolConfig = NSImage.SymbolConfiguration(pointSize: 120, weight: .medium)
                 .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor.systemGray]))
 
@@ -105,44 +106,6 @@ private extension ThumbnailProvider {
                     height: symbolSize.height
                 )
 
-                configuredSymbol.draw(in: symbolRect)
-            }
-        }
-
-        image.unlockFocus()
-        return image
-    }
-
-    func getDefaultAppIcon() -> NSImage {
-        let iconSize = NSSize(width: 256, height: 256)
-        let image = NSImage(size: iconSize)
-        image.lockFocus()
-
-        // Create border path
-        let padding: CGFloat = 12
-        let borderPath = NSBezierPath(roundedRect: NSRect(
-            x: 0 + padding,
-            y: 0 + padding,
-            width: iconSize.width - padding * 2,
-            height: iconSize.height - padding * 2
-        ), xRadius: 56, yRadius: 56) // iOS-style rounded corners
-
-        // Fill white background
-        NSColor.white.setFill()
-        borderPath.fill()
-
-        if let symbolImage = NSImage(systemSymbolName: "app.dashed", accessibilityDescription: nil) {
-            let symbolConfig = NSImage.SymbolConfiguration(pointSize: 120, weight: .medium)
-                .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor.systemGray]))
-
-            if let configuredSymbol = symbolImage.withSymbolConfiguration(symbolConfig) {
-                let symbolSize = configuredSymbol.size
-                let symbolRect = NSRect(
-                    x: (iconSize.width - symbolSize.width) / 2,
-                    y: (iconSize.height - symbolSize.height) / 2,
-                    width: symbolSize.width,
-                    height: symbolSize.height
-                )
                 configuredSymbol.draw(in: symbolRect)
             }
         }
