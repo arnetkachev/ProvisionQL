@@ -21,12 +21,6 @@ protocol AppBundleSource {
         caseInsensitive: Bool
     ) throws -> Data?
 
-    func writeFile(
-        at path: String,
-        relativeToBundle: Bool,
-        to destinationURL: URL
-    ) throws -> Bool
-
     func infoPlistData() throws -> Data
     func extractEntitlements(infoPlist: [String: Any]) -> [String: PlistValue]
 }
@@ -82,7 +76,7 @@ struct IPAAppBundleSource: AppBundleSource {
         )
     }
 
-    func writeFile(
+    private func writeFile(
         at path: String,
         relativeToBundle: Bool,
         to destinationURL: URL
@@ -184,25 +178,6 @@ struct DirectoryAppBundleSource: AppBundleSource {
         }
 
         return try Data(contentsOf: fileURL)
-    }
-
-    func writeFile(
-        at path: String,
-        relativeToBundle: Bool,
-        to destinationURL: URL
-    ) throws -> Bool {
-        guard let fileURL = url(for: path, relativeToBundle: relativeToBundle),
-              FileManager.default.fileExists(atPath: fileURL.path)
-        else {
-            return false
-        }
-
-        try FileManager.default.createDirectory(
-            at: destinationURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try FileManager.default.copyItem(at: fileURL, to: destinationURL)
-        return true
     }
 
     func infoPlistData() throws -> Data {
