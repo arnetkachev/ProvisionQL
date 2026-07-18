@@ -88,7 +88,7 @@ private extension AppArchiveParser {
             extensionType = parseExtensionType(from: identifier)
         }
 
-        let displayName = if isAppExtension, let extensionType {
+        let displayName = if isAppExtension, let extensionType, extensionType != parsedAppInfo.name {
             "\(parsedAppInfo.name) (\(extensionType))"
         } else {
             parsedAppInfo.name

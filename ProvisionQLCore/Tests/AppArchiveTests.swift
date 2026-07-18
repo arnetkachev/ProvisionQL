@@ -341,7 +341,7 @@ struct AppArchiveTests {
 
             let appInfo = try AppArchiveParser.parse(tempURL)
 
-            #expect(appInfo.name == "Share Extension (Share Extension)")
+            #expect(appInfo.name == "Share Extension")
             #expect(appInfo.bundleIdentifier == "com.test.share-extension")
             #expect(appInfo.extensionPointIdentifier == "com.apple.share-services")
         }
