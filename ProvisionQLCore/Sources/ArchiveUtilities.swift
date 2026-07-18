@@ -9,6 +9,11 @@ import ZIPFoundation
 
 /// Utilities for working with ZIP archives
 enum ArchiveUtilities {
+    /// In-memory reads are limited to plists and icons, which are small in any
+    /// legitimate archive. The cap keeps a hostile zip bomb from ballooning the
+    /// QuickLook extension's memory.
+    private static let maximumInMemoryFileSize = 100 * 1024 * 1024
+
     // MARK: - Archive Entry Extraction
 
     /// Extracts data from a specific file in the archive if present.
@@ -27,8 +32,17 @@ enum ArchiveUtilities {
             return nil
         }
 
+        guard entry.uncompressedSize <= UInt64(maximumInMemoryFileSize) else {
+            throw ParsingError.archiveExtractionFailed
+        }
+
         var data = Data()
         _ = try archive.extract(entry) { chunk in
+            // The header's uncompressedSize can lie; enforce the cap on the
+            // actual inflated bytes as well.
+            guard data.count + chunk.count <= maximumInMemoryFileSize else {
+                throw ParsingError.archiveExtractionFailed
+            }
             data.append(chunk)
         }
         return data
