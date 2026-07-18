@@ -118,14 +118,22 @@ extension IconExtractor {
         guard let plist else { return nil }
 
         var allIconFiles: [String] = []
+        var assetIconNames: [String] = []
 
         // Try CFBundleIcons (iOS 5.0+) and its per-device variants
         for key in ["CFBundleIcons", "CFBundleIcons~ipad", "CFBundleIcons~tv"] {
-            if let bundleIcons = plist[key] as? [String: Any],
-               let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any],
-               let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String]
-            {
+            guard let bundleIcons = plist[key] as? [String: Any],
+                  let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any]
+            else {
+                continue
+            }
+
+            if let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String] {
                 allIconFiles.append(contentsOf: iconFiles)
+            }
+
+            if let iconName = primaryIcon["CFBundleIconName"] as? String {
+                assetIconNames.append(iconName)
             }
         }
 
@@ -133,6 +141,12 @@ extension IconExtractor {
            let iconName = findBestIcon(from: allIconFiles)
         {
             return iconName
+        }
+
+        // Asset-catalog builds may declare only CFBundleIconName; matching PNGs
+        // with that base name are still commonly present at the bundle root.
+        if let assetIconName = assetIconNames.first {
+            return assetIconName
         }
 
         // Try CFBundleIconFiles (iOS 3.2+)
