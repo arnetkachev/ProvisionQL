@@ -32,4 +32,15 @@ public enum PreviewSupportedContentTypes {
             false
         }
     }
+
+    static func isProvisioningProfile(_ contentType: UTType) -> Bool {
+        switch contentType.identifier {
+        case mobileProvision.identifier,
+             legacyMobileProvision.identifier,
+             provisionProfile.identifier:
+            true
+        default:
+            false
+        }
+    }
 }

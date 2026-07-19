@@ -43,10 +43,16 @@ public final class PreviewModel {
 
 private extension PreviewModel {
     static func loadContent(for url: URL) async throws -> PreviewContent {
-        let contentType = try url.resourceValues(forKeys: [.contentTypeKey]).contentType
+        guard let contentType = try url.resourceValues(forKeys: [.contentTypeKey]).contentType else {
+            throw ParsingError.unsupportedFileType
+        }
 
-        if let contentType, PreviewSupportedContentTypes.isAppArchive(contentType) {
+        if PreviewSupportedContentTypes.isAppArchive(contentType) {
             return try await loadAppArchiveContent(for: url)
+        }
+
+        guard PreviewSupportedContentTypes.isProvisioningProfile(contentType) else {
+            throw ParsingError.unsupportedFileType
         }
 
         return try await loadProvisioningProfileContent(for: url)
