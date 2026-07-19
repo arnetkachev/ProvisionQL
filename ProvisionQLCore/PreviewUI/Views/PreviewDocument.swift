@@ -10,6 +10,5 @@ struct PreviewDocument<Content: View>: View {
             }
             .padding()
         }
-        .frame(minWidth: UIConstants.Window.minWidth, minHeight: UIConstants.Window.minHeight)
     }
 }

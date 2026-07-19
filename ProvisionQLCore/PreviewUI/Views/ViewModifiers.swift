@@ -45,11 +45,6 @@ enum UIConstants {
         static let dateColumn: CGFloat = 150
     }
 
-    enum Window {
-        static let minWidth: CGFloat = 600
-        static let minHeight: CGFloat = 400
-    }
-
     enum Color {
         static let validGreen = SwiftUI.Color(nsColor: .systemGreen)
     }
