@@ -1,25 +1,17 @@
-import ProvisionQLCore
 import SwiftUI
 
-protocol PreviewDiagnosticItem: Hashable {
-    var message: String { get }
-}
-
-extension AppDiagnostic: PreviewDiagnosticItem {}
-extension ProvisioningDiagnostic: PreviewDiagnosticItem {}
-
-struct DiagnosticsView<Diagnostic: PreviewDiagnosticItem>: View {
-    let diagnostics: [Diagnostic]
+struct DiagnosticsView: View {
+    let messages: [String]
 
     var body: some View {
         GroupBox {
             VStack(alignment: .leading, spacing: UIConstants.Padding.medium) {
-                ForEach(diagnostics, id: \.self) { diagnostic in
+                ForEach(messages.indices, id: \.self) { index in
                     HStack(alignment: .top, spacing: UIConstants.Padding.medium) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
 
-                        Text(diagnostic.message)
+                        Text(messages[index])
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }

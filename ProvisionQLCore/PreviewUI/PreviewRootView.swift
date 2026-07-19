@@ -11,7 +11,6 @@ public struct PreviewRootView: View {
         switch model.content {
         case .loading:
             ProgressView()
-                .frame(minWidth: UIConstants.Window.minWidth, minHeight: UIConstants.Window.minHeight)
         case .profile(let info, let fileInfo):
             ProvisioningPreviewView(info: info, fileInfo: fileInfo)
         case .archive(let appInfo, let iconSource, let fileInfo):

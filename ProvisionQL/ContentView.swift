@@ -10,7 +10,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    let model: HostAppModel
+    @Binding var fileURL: URL?
+    @State private var model = HostAppModel()
+    @State private var windowID = UUID()
+    @Environment(\.openWindow) private var openWindow
     @AppStorage("extensionHintDismissed") private var extensionHintDismissed = false
     @State private var isDropTargeted = false
 
@@ -45,16 +48,37 @@ struct ContentView: View {
             )
         }
         .frame(minWidth: 720, minHeight: 520)
+        // Steers open events toward the window already showing that file (or
+        // an empty one) instead of spawning an extra scene; delivery itself
+        // happens through FileOpenRouter.
+        .handlesExternalEvents(
+            preferring: fileURL.map { [$0.absoluteString] } ?? [],
+            allowing: fileURL == nil ? ["*"] : []
+        )
+        .onAppear(perform: registerAndDrainFileOpens)
+        .onChange(of: fileURL) {
+            updateEmptyWindowClaim()
+        }
+        .onDisappear {
+            FileOpenRouter.shared.setEmptyWindowClaim(id: windowID, claim: nil)
+        }
+        .task(id: fileURL) {
+            if let fileURL {
+                await model.previewRequested(for: fileURL)
+            }
+        }
         .navigationTitle(model.windowTitle)
         .toolbar {
             ToolbarItemGroup {
                 Button(action: openFile) {
                     Label("Open File", systemImage: "doc.badge.plus")
                 }
+                .help("Open a supported file")
 
                 Button(action: openExtensionSettings) {
                     Label("Extensions", systemImage: "puzzlepiece.extension")
                 }
+                .help("Open Extensions settings")
             }
         }
     }
@@ -63,20 +87,47 @@ struct ContentView: View {
         extensionHintDismissed = true
     }
 
+    private func registerAndDrainFileOpens() {
+        let router = FileOpenRouter.shared
+        router.openWindow = openWindow
+        updateEmptyWindowClaim()
+
+        var urls = router.takePending()
+        guard !urls.isEmpty else {
+            return
+        }
+
+        if fileURL == nil {
+            fileURL = urls.removeFirst()
+        }
+
+        for url in urls {
+            openWindow(value: url)
+        }
+    }
+
+    private func updateEmptyWindowClaim() {
+        if fileURL == nil {
+            FileOpenRouter.shared.setEmptyWindowClaim(id: windowID) { fileURL = $0 }
+        } else {
+            FileOpenRouter.shared.setEmptyWindowClaim(id: windowID, claim: nil)
+        }
+    }
+
     private func openFile() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = PreviewSupportedContentTypes.all
         panel.allowsMultipleSelection = false
         panel.canChooseFiles = true
-        panel.canChooseDirectories = true
+        // Packages (.xcarchive, .appex) stay selectable via allowedContentTypes;
+        // this only filters out arbitrary plain folders.
+        panel.canChooseDirectories = false
 
         guard panel.runModal() == .OK, let url = panel.url else {
             return
         }
 
-        Task {
-            await model.previewRequested(for: url)
-        }
+        fileURL = url
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
@@ -91,8 +142,8 @@ struct ContentView: View {
                 return
             }
 
-            Task {
-                await model.previewRequested(for: url)
+            Task { @MainActor in
+                fileURL = url
             }
         }
 
@@ -203,5 +254,5 @@ private struct EmptyStateView: View {
 }
 
 #Preview {
-    ContentView(model: HostAppModel())
+    ContentView(fileURL: .constant(nil))
 }

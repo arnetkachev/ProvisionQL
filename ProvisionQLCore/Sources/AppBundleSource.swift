@@ -21,12 +21,6 @@ protocol AppBundleSource {
         caseInsensitive: Bool
     ) throws -> Data?
 
-    func writeFile(
-        at path: String,
-        relativeToBundle: Bool,
-        to destinationURL: URL
-    ) throws -> Bool
-
     func infoPlistData() throws -> Data
     func extractEntitlements(infoPlist: [String: Any]) -> [String: PlistValue]
 }
@@ -64,7 +58,7 @@ struct IPAAppBundleSource: AppBundleSource {
 
     init(url: URL) throws {
         archive = try Archive(url: url, accessMode: .read)
-        appBundlePath = try ArchiveUtilities.findAppBundlePath(in: archive, archiveType: .ipa)
+        appBundlePath = try ArchiveUtilities.findAppBundlePath(in: archive)
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 
@@ -82,7 +76,7 @@ struct IPAAppBundleSource: AppBundleSource {
         )
     }
 
-    func writeFile(
+    private func writeFile(
         at path: String,
         relativeToBundle: Bool,
         to destinationURL: URL
@@ -186,24 +180,6 @@ struct DirectoryAppBundleSource: AppBundleSource {
         return try Data(contentsOf: fileURL)
     }
 
-    func writeFile(
-        at path: String,
-        relativeToBundle: Bool,
-        to destinationURL: URL
-    ) throws -> Bool {
-        let fileURL = url(for: path, relativeToBundle: relativeToBundle)
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            return false
-        }
-
-        try FileManager.default.createDirectory(
-            at: destinationURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try FileManager.default.copyItem(at: fileURL, to: destinationURL)
-        return true
-    }
-
     func infoPlistData() throws -> Data {
         try Data(contentsOf: infoPlistURL)
     }
@@ -219,9 +195,9 @@ struct DirectoryAppBundleSource: AppBundleSource {
         case .macOS:
             "Contents/MacOS/\(executableName)"
         }
-        let executableURL = url(for: executablePath, relativeToBundle: true)
-
-        guard FileManager.default.fileExists(atPath: executableURL.path) else {
+        guard let executableURL = url(for: executablePath, relativeToBundle: true),
+              FileManager.default.fileExists(atPath: executableURL.path)
+        else {
             return EntitlementsExtractor.extractEntitlements(from: bundleURL)
         }
 
@@ -260,13 +236,14 @@ struct DirectoryAppBundleSource: AppBundleSource {
         return appBundleURL
     }
 
-    private func url(for path: String, relativeToBundle: Bool) -> URL {
-        let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-
+    /// Container-root lookups only make sense for IPA archives; there is no
+    /// meaningful root outside the bundle for a directory source.
+    private func url(for path: String, relativeToBundle: Bool) -> URL? {
         guard relativeToBundle else {
-            return URL(fileURLWithPath: normalizedPath)
+            return nil
         }
 
+        let normalizedPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         return bundleURL.appendingPathComponent(normalizedPath)
     }
 
@@ -275,7 +252,10 @@ struct DirectoryAppBundleSource: AppBundleSource {
         relativeToBundle: Bool,
         caseInsensitive: Bool
     ) -> URL? {
-        let fileURL = url(for: path, relativeToBundle: relativeToBundle)
+        guard let fileURL = url(for: path, relativeToBundle: relativeToBundle) else {
+            return nil
+        }
+
         if FileManager.default.fileExists(atPath: fileURL.path) {
             return fileURL
         }

@@ -37,14 +37,65 @@ enum PlistParser {
         return try parse(data: data)
     }
 
-    static func extractAppleID(from plist: [String: Any]) -> String? {
+    static func extractAppStoreMetadata(from plist: [String: Any]) -> AppStoreMetadata? {
+        let appStoreID = metadataString(from: plist["itemId"])
+        let name = trimmedString(from: plist["itemName"])
+        let developer = trimmedString(from: plist["artistName"])
+        let releaseDate = metadataDate(from: plist["releaseDate"])
+        let appleID = extractAppleID(from: plist)
+
+        guard appStoreID != nil || name != nil || developer != nil || releaseDate != nil || appleID != nil else {
+            return nil
+        }
+
+        return AppStoreMetadata(
+            appStoreID: appStoreID,
+            name: name,
+            developer: developer,
+            releaseDate: releaseDate,
+            appleID: appleID
+        )
+    }
+
+    private static func extractAppleID(from plist: [String: Any]) -> String? {
         let downloadInfo = plist["com.apple.iTunesStore.downloadInfo"] as? [String: Any]
         let accountInfo = downloadInfo?["accountInfo"] as? [String: Any]
-        let nestedAppleID = accountInfo?["AppleID"] as? String
+        let nestedAppleID = trimmedString(from: accountInfo?["AppleID"])
 
-        return [nestedAppleID, plist["apple-id"] as? String, plist["appleId"] as? String]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty }
+        return [
+            nestedAppleID,
+            trimmedString(from: plist["apple-id"]),
+            trimmedString(from: plist["appleId"]),
+        ].compactMap(\.self).first
+    }
+
+    private static func metadataString(from value: Any?) -> String? {
+        if let string = trimmedString(from: value) {
+            return string
+        }
+
+        return (value as? NSNumber)?.stringValue
+    }
+
+    private static func trimmedString(from value: Any?) -> String? {
+        guard let string = value as? String else {
+            return nil
+        }
+
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func metadataDate(from value: Any?) -> Date? {
+        if let date = value as? Date {
+            return date
+        }
+
+        guard let string = trimmedString(from: value) else {
+            return nil
+        }
+
+        return ISO8601DateFormatter().date(from: string)
     }
 
     // MARK: - App Info Extraction
@@ -55,8 +106,11 @@ enum PlistParser {
     static func extractAppInfo(from plist: [String: Any]) -> AppInfo {
         let bundleIdentifier = plist["CFBundleIdentifier"] as? String ?? "Unknown"
         let name = extractAppName(from: plist)
-        let version = plist["CFBundleShortVersionString"] as? String ?? "1.0"
-        let buildNumber = plist["CFBundleVersion"] as? String ?? "1"
+        // Fall back between the real version fields instead of inventing values.
+        let shortVersion = plist["CFBundleShortVersionString"] as? String
+        let bundleVersion = plist["CFBundleVersion"] as? String
+        let version = shortVersion ?? bundleVersion ?? "Unknown"
+        let buildNumber = bundleVersion ?? version
         let deviceFamily = extractDeviceFamily(from: plist)
         let minimumOSVersion = extractMinimumOSVersion(from: plist)
         let sdkVersion = extractSDKVersion(from: plist)

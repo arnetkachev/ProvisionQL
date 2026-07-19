@@ -32,7 +32,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ProvisionQLCoreTests",
-            dependencies: ["ProvisionQLCore"],
+            dependencies: ["ProvisionQLCore", "PreviewUI", "ZIPFoundation"],
             path: "Tests",
             resources: [
                 .process("Fixtures")

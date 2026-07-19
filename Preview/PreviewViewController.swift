@@ -11,11 +11,12 @@ import SwiftUI
 
 class PreviewViewController: NSViewController, QLPreviewingController {
     private let model = PreviewModel()
-    private var hostingController: NSHostingController<PreviewRootView>?
 
     override func loadView() {
-        let hostingController = NSHostingController(rootView: PreviewRootView(model: model))
-        self.hostingController = hostingController
+        let rootView = PreviewRootView(model: model)
+            .environment(\.allowsExternalLinks, false)
+        let hostingController = NSHostingController(rootView: rootView)
+        hostingController.sizingOptions = []
 
         view = hostingController.view
         addChild(hostingController)

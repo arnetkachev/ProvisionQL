@@ -49,14 +49,13 @@
       shouldAutocreateTestPlan = "YES">
       <Testables>
          <TestableReference
-            skipped = "NO"
-            parallelizable = "YES">
+            skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "55BC97532DFF0BA1008F9F5D"
-               BuildableName = "CoreTests.xctest"
-               BlueprintName = "CoreTests"
-               ReferencedContainer = "container:ProvisionQL.xcodeproj">
+               BlueprintIdentifier = "ProvisionQLCoreTests"
+               BuildableName = "ProvisionQLCoreTests"
+               BlueprintName = "ProvisionQLCoreTests"
+               ReferencedContainer = "container:ProvisionQLCore">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -73,6 +72,7 @@
       allowLocationSimulation = "YES">
       <PathRunnable
          runnableDebuggingMode = "0"
+         BundleIdentifier = "com.ealeksandrov.ProvisionQL"
          FilePath = "/Applications/ProvisionQL.app">
       </PathRunnable>
       <MacroExpansion>

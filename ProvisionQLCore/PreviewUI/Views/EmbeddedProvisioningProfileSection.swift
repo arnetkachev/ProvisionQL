@@ -26,7 +26,7 @@ struct EmbeddedProvisioningProfileSection: View {
 
             if !profile.diagnostics.isEmpty {
                 PreviewSection(title: "Diagnostics") {
-                    DiagnosticsView(diagnostics: profile.diagnostics)
+                    DiagnosticsView(messages: profile.diagnostics.map(\.message))
                 }
             }
 

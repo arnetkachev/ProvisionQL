@@ -9,9 +9,10 @@
 * Shows explicit provisioning profile type and signature status
 * Fixes parsing for macOS `.xcarchive` and `.appex` bundles
 * Adds support for `.tipa` (TrollStore IPA) files
-* Shows Apple ID from iTunes metadata in IPA previews
+* Shows App Store metadata from `iTunesMetadata.plist` in IPA previews
 * Shows archive parsing failures in the preview
-* Adds a host app file inspector for opening and dropping supported files
+* Adds a host app file inspector with multi-window support for opening and dropping supported files
+* Hardens parsing against malformed files (crafted code signatures, zip bombs, nested app bundles)
 
 ## Version 1.6.4
 
@@ -52,12 +53,12 @@
 * Removes application-bundle (`.app`) support ([#14](https://github.com/ealeksandrov/ProvisionQL/issues/14))
 * Fixes expiration status calculation ([#17](https://github.com/ealeksandrov/ProvisionQL/issues/17))
 * Fixes icons "IconFlavor" for apps thumbnails ([#2](https://github.com/ealeksandrov/ProvisionQL/issues/2))
-* Fixes wrong thumnails and previews for bundles with multiple plugin executables
+* Fixes wrong thumbnails and previews for bundles with multiple plugin executables
 * Improves app preview layout
 * Improves App Transport Security section formatting
 
 ## Version 1.3.0
-* Adds NSAppTransportSecurity, DTSDKName, and MinimumOSVersion ([#7](https://github.com/ealeksandrov/ProvisionQL/pull/7)
+* Adds NSAppTransportSecurity, DTSDKName, and MinimumOSVersion ([#7](https://github.com/ealeksandrov/ProvisionQL/pull/7))
 
 ## Version 1.2.0
 * Adds support for app extensions (`.appex`)

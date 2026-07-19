@@ -30,15 +30,15 @@ public enum AppArchiveParser {
 private extension AppArchiveParser {
     static func parseIPA(_ url: URL) throws -> AppArchiveParseResult {
         let source = try IPAAppBundleSource(url: url)
-        let appleID = try? source.data(
+        let appStoreMetadata = try? source.data(
             at: "iTunesMetadata.plist",
             relativeToBundle: false,
             caseInsensitive: false
         ).flatMap { data in
-            try PlistParser.extractAppleID(from: PlistParser.parse(data: data))
+            try PlistParser.extractAppStoreMetadata(from: PlistParser.parse(data: data))
         }
 
-        return try parseApp(from: source, appleID: appleID)
+        return try parseApp(from: source, appStoreMetadata: appStoreMetadata)
     }
 
     static func parseXCArchive(_ url: URL) throws -> AppArchiveParseResult {
@@ -68,7 +68,7 @@ private extension AppArchiveParser {
 
     static func parseApp(
         from source: AppBundleSource,
-        appleID: String? = nil,
+        appStoreMetadata: AppStoreMetadata? = nil,
         isAppExtension: Bool = false
     ) throws -> AppArchiveParseResult {
         let plist = try source.infoPlist()
@@ -88,7 +88,7 @@ private extension AppArchiveParser {
             extensionType = parseExtensionType(from: identifier)
         }
 
-        let displayName = if isAppExtension, let extensionType {
+        let displayName = if isAppExtension, let extensionType, extensionType != parsedAppInfo.name {
             "\(parsedAppInfo.name) (\(extensionType))"
         } else {
             parsedAppInfo.name
@@ -101,7 +101,7 @@ private extension AppArchiveParser {
             bundleIdentifier: parsedAppInfo.bundleIdentifier,
             version: parsedAppInfo.version,
             buildNumber: parsedAppInfo.buildNumber,
-            appleID: appleID,
+            appStoreMetadata: appStoreMetadata,
             embeddedProvisioningProfile: embeddedProfile.profile,
             entitlements: entitlements,
             deviceFamily: parsedAppInfo.deviceFamily,

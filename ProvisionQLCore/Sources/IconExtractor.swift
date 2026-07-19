@@ -118,35 +118,35 @@ extension IconExtractor {
         guard let plist else { return nil }
 
         var allIconFiles: [String] = []
+        var assetIconNames: [String] = []
 
-        // Try CFBundleIcons (iOS 5.0+)
-        if let bundleIcons = plist["CFBundleIcons"] as? [String: Any],
-           let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any],
-           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String]
-        {
-            allIconFiles.append(contentsOf: iconFiles)
-        }
+        // Try CFBundleIcons (iOS 5.0+) and its per-device variants
+        for key in ["CFBundleIcons", "CFBundleIcons~ipad", "CFBundleIcons~tv"] {
+            guard let bundleIcons = plist[key] as? [String: Any],
+                  let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any]
+            else {
+                continue
+            }
 
-        // Try CFBundleIcons~ipad
-        if let bundleIcons = plist["CFBundleIcons~ipad"] as? [String: Any],
-           let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any],
-           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String]
-        {
-            allIconFiles.append(contentsOf: iconFiles)
-        }
+            if let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String] {
+                allIconFiles.append(contentsOf: iconFiles)
+            }
 
-        // Try CFBundleIcons~tv (tvOS)
-        if let bundleIcons = plist["CFBundleIcons~tv"] as? [String: Any],
-           let primaryIcon = bundleIcons["CFBundlePrimaryIcon"] as? [String: Any],
-           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String]
-        {
-            allIconFiles.append(contentsOf: iconFiles)
+            if let iconName = primaryIcon["CFBundleIconName"] as? String {
+                assetIconNames.append(iconName)
+            }
         }
 
         if !allIconFiles.isEmpty,
            let iconName = findBestIcon(from: allIconFiles)
         {
             return iconName
+        }
+
+        // Asset-catalog builds may declare only CFBundleIconName; matching PNGs
+        // with that base name are still commonly present at the bundle root.
+        if let assetIconName = assetIconNames.first {
+            return assetIconName
         }
 
         // Try CFBundleIconFiles (iOS 3.2+)

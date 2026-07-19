@@ -6,12 +6,34 @@
 
 import Foundation
 
+public struct AppStoreMetadata: Sendable, Codable, Hashable {
+    public let appStoreID: String?
+    public let name: String?
+    public let developer: String?
+    public let releaseDate: Date?
+    public let appleID: String?
+
+    public init(
+        appStoreID: String? = nil,
+        name: String? = nil,
+        developer: String? = nil,
+        releaseDate: Date? = nil,
+        appleID: String? = nil
+    ) {
+        self.appStoreID = appStoreID
+        self.name = name
+        self.developer = developer
+        self.releaseDate = releaseDate
+        self.appleID = appleID
+    }
+}
+
 public struct AppInfo: Sendable, Codable, Hashable {
     public let name: String
     public let bundleIdentifier: String
-    public let appleID: String?
     public let version: String
     public let buildNumber: String
+    public let appStoreMetadata: AppStoreMetadata?
     public let embeddedProvisioningProfile: ProvisioningInfo?
     public let entitlements: [String: PlistValue]
     public let deviceFamily: [String]
@@ -25,7 +47,7 @@ public struct AppInfo: Sendable, Codable, Hashable {
         bundleIdentifier: String,
         version: String,
         buildNumber: String,
-        appleID: String? = nil,
+        appStoreMetadata: AppStoreMetadata? = nil,
         embeddedProvisioningProfile: ProvisioningInfo? = nil,
         entitlements: [String: PlistValue] = [:],
         deviceFamily: [String] = [],
@@ -36,9 +58,9 @@ public struct AppInfo: Sendable, Codable, Hashable {
     ) {
         self.name = name
         self.bundleIdentifier = bundleIdentifier
-        self.appleID = appleID
         self.version = version
         self.buildNumber = buildNumber
+        self.appStoreMetadata = appStoreMetadata
         self.embeddedProvisioningProfile = embeddedProvisioningProfile
         self.entitlements = entitlements
         self.deviceFamily = deviceFamily
@@ -56,9 +78,5 @@ public extension AppInfo {
         } else {
             version
         }
-    }
-
-    var hasEmbeddedProfile: Bool {
-        embeddedProvisioningProfile != nil
     }
 }

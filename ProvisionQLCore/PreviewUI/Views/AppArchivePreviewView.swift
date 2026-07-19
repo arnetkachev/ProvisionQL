@@ -20,9 +20,16 @@ struct AppArchivePreviewView: View {
                 appDetails
             }
 
+            if let appStoreMetadata = appInfo.appStoreMetadata {
+                Divider()
+                PreviewSection(title: "App Store") {
+                    AppStoreMetadataSection(metadata: appStoreMetadata, appName: appInfo.name)
+                }
+            }
+
             if !appInfo.diagnostics.isEmpty {
                 PreviewSection(title: "Diagnostics") {
-                    DiagnosticsView(diagnostics: appInfo.diagnostics)
+                    DiagnosticsView(messages: appInfo.diagnostics.map(\.message))
                 }
             }
 
@@ -33,7 +40,7 @@ struct AppArchivePreviewView: View {
                 }
             }
 
-            if appInfo.hasEmbeddedProfile, let profile = appInfo.embeddedProvisioningProfile {
+            if let profile = appInfo.embeddedProvisioningProfile {
                 Divider()
                 EmbeddedProvisioningProfileSection(profile: profile)
             }
@@ -50,10 +57,6 @@ struct AppArchivePreviewView: View {
         VStack(alignment: .leading, spacing: UIConstants.Padding.medium) {
             InfoRow(label: "Version", value: appInfo.displayVersion)
             InfoRow(label: "Bundle ID", value: appInfo.bundleIdentifier)
-
-            if let appleID = appInfo.appleID {
-                InfoRow(label: "Apple ID", value: appleID)
-            }
 
             if let extensionPointIdentifier = appInfo.extensionPointIdentifier {
                 InfoRow(label: "Extension Point", value: extensionPointIdentifier)

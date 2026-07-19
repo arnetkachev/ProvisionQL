@@ -63,8 +63,8 @@ struct CoreTests {
             #expect(badgeInfo.profileType == .development)
         }
 
-        @Test("BadgeInfo with zero devices")
-        func badgeInfoZeroDevices() throws {
+        @Test("BadgeInfo without device list has nil count")
+        func badgeInfoWithoutDeviceList() throws {
             let mockProfile = RawProfile(
                 UUID: "87654321-4321-4321-4321-ABCDEF123456",
                 Name: "App Store Profile",
@@ -83,7 +83,7 @@ struct CoreTests {
             let provisioningInfo = try ProvisioningInfo(from: mockProfile)
             let badgeInfo = BadgeInfo(from: provisioningInfo)
 
-            #expect(badgeInfo.deviceCount == 0)
+            #expect(badgeInfo.deviceCount == nil)
             #expect(badgeInfo.profileType == .appStore)
         }
     }
@@ -300,6 +300,10 @@ struct CoreTests {
             (
                 platformStrings: ["iOS", "macOS"],
                 expected: [ProvisioningInfo.Platform.iOS, ProvisioningInfo.Platform.macOS]
+            ),
+            (
+                platformStrings: ["iOS", "xrOS", "visionOS"],
+                expected: [ProvisioningInfo.Platform.iOS, ProvisioningInfo.Platform.visionOS]
             ),
             (platformStrings: ["unknown"], expected: [ProvisioningInfo.Platform.unknown("unknown")]),
             (platformStrings: nil, expected: [ProvisioningInfo.Platform.iOS])
@@ -534,6 +538,33 @@ struct CoreTests {
             }
         }
 
+        @Test("PlistValue keeps NSNumber integers 0 and 1 as integers")
+        func plistValueNumberBridging() throws {
+            #expect(PlistValue.from(value: NSNumber(value: 0)) == .integer(0))
+            #expect(PlistValue.from(value: NSNumber(value: 1)) == .integer(1))
+            #expect(PlistValue.from(value: NSNumber(value: true)) == .bool(true))
+            #expect(PlistValue.from(value: NSNumber(value: false)) == .bool(false))
+            #expect(PlistValue.from(value: NSNumber(value: UInt64.max)) == .string("18446744073709551615"))
+
+            let plistXML = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0">
+            <dict>
+                <key>count</key><integer>1</integer>
+                <key>enabled</key><true/>
+            </dict>
+            </plist>
+            """
+            let parsed = try PropertyListSerialization.propertyList(
+                from: Data(plistXML.utf8),
+                options: [],
+                format: nil
+            )
+            let value = PlistValue.from(value: parsed)
+
+            #expect(value == .dictionary(["count": .integer(1), "enabled": .bool(true)]))
+        }
+
         @Test("PlistValue property list Codable conformance")
         func plistValueCodable() throws {
             let testCases: [PlistValue] = [
@@ -578,6 +609,30 @@ struct CoreTests {
         }
     }
 
+    @Suite("Icon Name Detection Tests")
+    struct IconNameDetectionTests {
+        @Test("CFBundleIconName is used when no icon file list is declared")
+        func iconNameFallback() {
+            let plist: [String: Any] = [
+                "CFBundleIcons": ["CFBundlePrimaryIcon": ["CFBundleIconName": "CustomIcon"]]
+            ]
+
+            #expect(IconExtractor.findMainIconName(in: plist) == "CustomIcon")
+        }
+
+        @Test("Icon file list wins over CFBundleIconName")
+        func iconFileListPrecedence() {
+            let plist: [String: Any] = [
+                "CFBundleIcons": ["CFBundlePrimaryIcon": [
+                    "CFBundleIconName": "CustomIcon",
+                    "CFBundleIconFiles": ["AppIcon60x60"]
+                ]]
+            ]
+
+            #expect(IconExtractor.findMainIconName(in: plist) == "AppIcon60x60")
+        }
+    }
+
     @Suite("Mach-O Entitlements Tests")
     struct MachOEntitlementsTests {
         @Test("Extracts embedded entitlements from code signature")
@@ -603,6 +658,57 @@ struct CoreTests {
             var data = Data()
             data.appendBigEndianUInt32(0xCAFE_BABE)
             data.appendBigEndianUInt32(UInt32.max)
+
+            #expect(MachOEntitlementsReader.extractEntitlements(from: data) == nil)
+        }
+
+        @Test("Rejects superblobs with impossible index entry counts")
+        func rejectsImpossibleSuperblobIndexCount() {
+            var codeSignature = Data()
+            codeSignature.appendBigEndianUInt32(0xFADE_0CC0)
+            codeSignature.appendBigEndianUInt32(12)
+            codeSignature.appendBigEndianUInt32(UInt32.max)
+
+            var data = createMachOHeader(loadCommandCount: 1, loadCommandsSize: 16)
+            data.appendLittleEndianUInt32(0x1D)
+            data.appendLittleEndianUInt32(16)
+            data.appendLittleEndianUInt32(48)
+            data.appendLittleEndianUInt32(UInt32(codeSignature.count))
+            data.append(codeSignature)
+
+            #expect(MachOEntitlementsReader.extractEntitlements(from: data) == nil)
+        }
+
+        @Test("Rejects index entries outside the superblob's declared length")
+        func rejectsEntriesBeyondDeclaredLength() throws {
+            let plistData = try PropertyListSerialization.data(
+                fromPropertyList: ["get-task-allow": true],
+                format: .xml,
+                options: 0
+            )
+
+            var entitlementsBlob = Data()
+            entitlementsBlob.appendBigEndianUInt32(0xFADE_7171)
+            entitlementsBlob.appendBigEndianUInt32(UInt32(8 + plistData.count))
+            entitlementsBlob.append(plistData)
+
+            // The superblob declares a length of 12 bytes, but the index entry
+            // and entitlements blob sit beyond that. Nothing outside the
+            // declared length may be parsed.
+            var codeSignature = Data()
+            codeSignature.appendBigEndianUInt32(0xFADE_0CC0)
+            codeSignature.appendBigEndianUInt32(12)
+            codeSignature.appendBigEndianUInt32(1)
+            codeSignature.appendBigEndianUInt32(5)
+            codeSignature.appendBigEndianUInt32(20)
+            codeSignature.append(entitlementsBlob)
+
+            var data = createMachOHeader(loadCommandCount: 1, loadCommandsSize: 16)
+            data.appendLittleEndianUInt32(0x1D)
+            data.appendLittleEndianUInt32(16)
+            data.appendLittleEndianUInt32(48)
+            data.appendLittleEndianUInt32(UInt32(codeSignature.count))
+            data.append(codeSignature)
 
             #expect(MachOEntitlementsReader.extractEntitlements(from: data) == nil)
         }

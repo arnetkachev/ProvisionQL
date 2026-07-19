@@ -9,21 +9,12 @@ import ZIPFoundation
 
 /// Utilities for working with ZIP archives
 enum ArchiveUtilities {
+    /// In-memory reads are limited to plists and icons, which are small in any
+    /// legitimate archive. The cap keeps a hostile zip bomb from ballooning the
+    /// QuickLook extension's memory.
+    private static let maximumInMemoryFileSize = 100 * 1024 * 1024
+
     // MARK: - Archive Entry Extraction
-
-    /// Extracts data from a specific file in the archive
-    /// - Parameters:
-    ///   - archive: The ZIP archive
-    ///   - path: The path to the file within the archive
-    /// - Returns: The extracted data
-    /// - Throws: ParsingError if the file cannot be found or extracted
-    static func extractFile(from archive: Archive, path: String) throws -> Data {
-        guard let entry = archive[path] else {
-            throw ParsingError.archiveExtractionFailed
-        }
-
-        return try extractData(from: entry, in: archive)
-    }
 
     /// Extracts data from a specific file in the archive if present.
     /// - Parameters:
@@ -37,21 +28,24 @@ enum ArchiveUtilities {
         path: String,
         caseInsensitive: Bool = false
     ) throws -> Data? {
-        if let entry = archive[path] {
-            return try extractData(from: entry, in: archive)
-        }
-
-        guard caseInsensitive else {
+        guard let entry = findEntry(in: archive, path: path, caseInsensitive: caseInsensitive) else {
             return nil
         }
 
-        for entry in archive {
-            if entry.path.lowercased() == path.lowercased() {
-                return try extractData(from: entry, in: archive)
-            }
+        guard entry.uncompressedSize <= UInt64(maximumInMemoryFileSize) else {
+            throw ParsingError.archiveExtractionFailed
         }
 
-        return nil
+        var data = Data()
+        _ = try archive.extract(entry) { chunk in
+            // The header's uncompressedSize can lie; enforce the cap on the
+            // actual inflated bytes as well.
+            guard data.count + chunk.count <= maximumInMemoryFileSize else {
+                throw ParsingError.archiveExtractionFailed
+            }
+            data.append(chunk)
+        }
+        return data
     }
 
     /// Extracts a specific file to disk if present.
@@ -68,104 +62,52 @@ enum ArchiveUtilities {
         to destinationURL: URL,
         caseInsensitive: Bool = false
     ) throws -> Bool {
-        if let entry = archive[path] {
-            try extract(entry, from: archive, to: destinationURL)
-            return true
-        }
-
-        guard caseInsensitive else {
+        guard let entry = findEntry(in: archive, path: path, caseInsensitive: caseInsensitive) else {
             return false
         }
 
-        for entry in archive {
-            if entry.path.lowercased() == path.lowercased() {
-                try extract(entry, from: archive, to: destinationURL)
-                return true
-            }
-        }
-
-        return false
-    }
-
-    /// Extracts data from an archive entry
-    /// - Parameters:
-    ///   - entry: The archive entry
-    ///   - archive: The archive containing the entry
-    /// - Returns: The extracted data
-    /// - Throws: Error if extraction fails
-    private static func extractData(from entry: Entry, in archive: Archive) throws -> Data {
-        var data = Data()
-        _ = try archive.extract(entry) { chunk in
-            data.append(chunk)
-        }
-        return data
-    }
-
-    private static func extract(_ entry: Entry, from archive: Archive, to destinationURL: URL) throws {
         try FileManager.default.createDirectory(
             at: destinationURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         _ = try archive.extract(entry, to: destinationURL)
+        return true
+    }
+
+    private static func findEntry(in archive: Archive, path: String, caseInsensitive: Bool) -> Entry? {
+        if let entry = archive[path] {
+            return entry
+        }
+
+        guard caseInsensitive else {
+            return nil
+        }
+
+        let lowercasedPath = path.lowercased()
+        return archive.first { $0.path.lowercased() == lowercasedPath }
     }
 
     // MARK: - App Bundle Path Finding
 
-    /// Finds the app bundle path in an archive
-    /// - Parameters:
-    ///   - archive: The ZIP archive
-    ///   - archiveType: The type of archive (IPA or XCArchive)
-    /// - Returns: The app bundle path
+    /// Finds the top-level `Payload/*.app/` bundle path in an IPA archive.
+    /// Works whether or not the archive contains directory entries, and ignores
+    /// nested bundles like `Payload/App.app/Watch/WatchApp.app/`.
+    /// - Parameter archive: The ZIP archive
+    /// - Returns: The app bundle path including trailing slash
     /// - Throws: ParsingError if no app bundle is found
-    static func findAppBundlePath(in archive: Archive, archiveType: ArchiveType) throws -> String {
-        switch archiveType {
-        case .ipa:
-            // Look for Payload/*.app/
-            for entry in archive {
-                if entry.path.hasPrefix("Payload/"), entry.path.hasSuffix(".app/") {
-                    return entry.path
-                }
+    static func findAppBundlePath(in archive: Archive) throws -> String {
+        for entry in archive {
+            let components = entry.path.components(separatedBy: "/")
+            guard components.count >= 2,
+                  components[0] == "Payload",
+                  components[1].hasSuffix(".app")
+            else {
+                continue
             }
 
-            // Some IPA creators omit directory entries and only include files under Payload/*.app/.
-            if let appBundlePath = findAppBundlePathFlexible(in: archive) {
-                return appBundlePath + "/"
-            }
-        case .xcarchive:
-            // Look for Products/Applications/*.app/
-            for entry in archive {
-                if entry.path.hasPrefix("Products/Applications/"), entry.path.hasSuffix(".app/") {
-                    return entry.path
-                }
-            }
+            return "Payload/\(components[1])/"
         }
 
         throw ParsingError.invalidAppBundle
-    }
-
-    /// Finds the app bundle path in an IPA archive with more flexible matching
-    /// - Parameter archive: The ZIP archive
-    /// - Returns: The app bundle path if found, nil otherwise
-    static func findAppBundlePathFlexible(in archive: Archive) -> String? {
-        for entry in archive {
-            let path = entry.path
-            if path.hasPrefix("Payload/"), path.hasSuffix(".app/") {
-                return String(path.dropLast()) // Remove trailing slash
-            }
-            if path.hasPrefix("Payload/"), path.contains(".app/") {
-                let components = path.components(separatedBy: "/")
-                if let appIndex = components.firstIndex(where: { $0.hasSuffix(".app") }) {
-                    return components[0 ... appIndex].joined(separator: "/")
-                }
-            }
-        }
-        return nil
-    }
-
-    // MARK: - ArchiveType
-
-    enum ArchiveType {
-        case ipa
-        case xcarchive
     }
 }

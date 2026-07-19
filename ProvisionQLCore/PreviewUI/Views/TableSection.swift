@@ -6,7 +6,7 @@
 
 import SwiftUI
 
-struct TableSection<Content: View, RowContent: View, Element: Hashable>: View {
+struct TableSection<Content: View, RowContent: View, Element>: View {
     let header: Content
     let data: [Element]
     let rowContent: (Element) -> RowContent

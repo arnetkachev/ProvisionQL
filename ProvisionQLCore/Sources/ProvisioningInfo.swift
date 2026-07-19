@@ -98,7 +98,7 @@ public struct ProvisioningInfo: Sendable, Codable, Hashable {
                 .tvOS
             case "watchOS":
                 .watchOS
-            case "visionOS":
+            case "visionOS", "xrOS":
                 .visionOS
             default:
                 .unknown(rawValue)
@@ -190,9 +190,10 @@ extension ProvisioningInfo {
         profileType = Self.profileType(for: profile, entitlements: entitlements)
 
         // Determine platform
-        let platforms = profile.Platform?.compactMap { platformString in
-            Platform(rawValue: platformString)
-        } ?? []
+        var seenPlatforms = Set<Platform>()
+        let platforms = (profile.Platform ?? [])
+            .compactMap(Platform.init(rawValue:))
+            .filter { seenPlatforms.insert($0).inserted }
         if platforms.isEmpty {
             diagnostics.append(.init(
                 severity: .warning,
