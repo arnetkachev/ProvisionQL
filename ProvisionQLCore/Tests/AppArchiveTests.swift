@@ -39,7 +39,7 @@ struct AppArchiveTests {
 
             #expect(appInfo.name == "Test App")
             #expect(appInfo.bundleIdentifier == "com.test.app")
-            #expect(appInfo.appleID == nil)
+            #expect(appInfo.appStoreMetadata == nil)
             #expect(appInfo.version == "1.0.0")
             #expect(appInfo.buildNumber == "100")
             #expect(appInfo.embeddedProvisioningProfile?.name == mockProfile.name)
@@ -128,7 +128,7 @@ struct AppArchiveTests {
 
             #expect(appInfo.name == "Test App Display")
             #expect(appInfo.bundleIdentifier == "com.test.app")
-            #expect(appInfo.appleID == nil)
+            #expect(appInfo.appStoreMetadata == nil)
             #expect(appInfo.diagnostics.isEmpty)
         }
 
@@ -168,30 +168,42 @@ struct AppArchiveTests {
             #expect(appInfo.bundleIdentifier == "com.test.app")
         }
 
-        @Test("Apple ID metadata uses supported keys in precedence order")
-        func appleIDMetadataPrecedence() {
-            #expect(PlistParser.extractAppleID(from: [
+        @Test("App Store metadata uses supported values and Apple ID precedence")
+        func appStoreMetadataExtraction() throws {
+            let releaseDateString = "2025-10-23T07:00:00Z"
+            let metadata = try #require(PlistParser.extractAppStoreMetadata(from: [
+                "itemId": 6_744_585_772,
+                "itemName": " BlancVPN ",
+                "artistName": " Yadda OU ",
+                "releaseDate": releaseDateString,
                 "com.apple.iTunesStore.downloadInfo": [
                     "accountInfo": ["AppleID": "  primary@example.com\n"]
                 ],
                 "apple-id": "fallback@example.com",
-                "appleId": "legacy@example.com"
-            ]) == "primary@example.com")
+                "appleId": "legacy@example.com",
+            ]))
 
-            #expect(PlistParser.extractAppleID(from: [
+            #expect(metadata.appStoreID == "6744585772")
+            #expect(metadata.name == "BlancVPN")
+            #expect(metadata.developer == "Yadda OU")
+            #expect(metadata.releaseDate == ISO8601DateFormatter().date(from: releaseDateString))
+            #expect(metadata.appleID == "primary@example.com")
+
+            #expect(PlistParser.extractAppStoreMetadata(from: [
                 "com.apple.iTunesStore.downloadInfo": [
                     "accountInfo": ["AppleID": " \n"]
                 ],
                 "apple-id": " fallback@example.com ",
-                "appleId": "legacy@example.com"
-            ]) == "fallback@example.com")
+                "appleId": "legacy@example.com",
+            ])?.appleID == "fallback@example.com")
 
-            #expect(PlistParser.extractAppleID(from: [
+            #expect(PlistParser.extractAppStoreMetadata(from: [
                 "apple-id": "",
-                "appleId": " legacy@example.com "
-            ]) == "legacy@example.com")
+                "appleId": " legacy@example.com ",
+            ])?.appleID == "legacy@example.com")
 
-            #expect(PlistParser.extractAppleID(from: ["apple-id": 123]) == nil)
+            #expect(PlistParser.extractAppStoreMetadata(from: ["itemId": " 12345 "])?.appStoreID == "12345")
+            #expect(PlistParser.extractAppStoreMetadata(from: ["apple-id": 123]) == nil)
         }
 
         @Test("Parser treats TIPA archives as IPAs")
@@ -211,9 +223,14 @@ struct AppArchiveTests {
 
             let ipaInfo = try AppArchiveParser.parse(ipaURL)
             let tipaInfo = try AppArchiveParser.parse(tipaURL)
+            let metadata = try #require(tipaInfo.appStoreMetadata)
 
             #expect(tipaInfo == ipaInfo)
-            #expect(tipaInfo.appleID == "primary@example.com")
+            #expect(metadata.appStoreID == "6744585772")
+            #expect(metadata.name == "Test App on the Store")
+            #expect(metadata.developer == "Example Developer")
+            #expect(metadata.releaseDate == ISO8601DateFormatter().date(from: "2025-10-23T07:00:00Z"))
+            #expect(metadata.appleID == "primary@example.com")
         }
 
         @Test("Parser ignores malformed iTunes metadata")
@@ -229,7 +246,7 @@ struct AppArchiveTests {
 
             let appInfo = try AppArchiveParser.parse(tempURL)
 
-            #expect(appInfo.appleID == nil)
+            #expect(appInfo.appStoreMetadata == nil)
         }
 
         @Test("Icon extractor treats TIPA archives as IPAs")
@@ -461,9 +478,13 @@ private func createMockInfoPlistData(
 
 private func createMockITunesMetadataPlistData() -> Data {
     let plist: [String: Any] = [
+        "itemId": 6_744_585_772,
+        "itemName": "Test App on the Store",
+        "artistName": "Example Developer",
+        "releaseDate": "2025-10-23T07:00:00Z",
         "com.apple.iTunesStore.downloadInfo": [
             "accountInfo": ["AppleID": "primary@example.com"]
-        ]
+        ],
     ]
 
     return try! PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)

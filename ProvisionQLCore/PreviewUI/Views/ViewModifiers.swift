@@ -6,6 +6,10 @@
 
 import SwiftUI
 
+public extension EnvironmentValues {
+    @Entry var allowsExternalLinks = true
+}
+
 extension View {
     func sectionBackground() -> some View {
         padding(.vertical, UIConstants.Padding.standard)

@@ -9,7 +9,7 @@
 * Shows explicit provisioning profile type and signature status
 * Fixes parsing for macOS `.xcarchive` and `.appex` bundles
 * Adds support for `.tipa` (TrollStore IPA) files
-* Shows Apple ID from iTunes metadata in IPA previews
+* Shows App Store metadata from `iTunesMetadata.plist` in IPA previews
 * Shows archive parsing failures in the preview
 * Adds a host app file inspector with multi-window support for opening and dropping supported files
 * Hardens parsing against malformed files (crafted code signatures, zip bombs, nested app bundles)

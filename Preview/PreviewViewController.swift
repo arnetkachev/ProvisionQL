@@ -13,7 +13,9 @@ class PreviewViewController: NSViewController, QLPreviewingController {
     private let model = PreviewModel()
 
     override func loadView() {
-        let hostingController = NSHostingController(rootView: PreviewRootView(model: model))
+        let rootView = PreviewRootView(model: model)
+            .environment(\.allowsExternalLinks, false)
+        let hostingController = NSHostingController(rootView: rootView)
         hostingController.sizingOptions = []
 
         view = hostingController.view
