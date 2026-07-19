@@ -13,7 +13,7 @@ struct ProvisionQLApp: App {
 
     var body: some Scene {
         WindowGroup(for: URL.self) { $url in
-            ContentView(fileURL: url)
+            ContentView(fileURL: $url)
         }
         .commands {
             CommandGroup(replacing: .appInfo) {
@@ -28,26 +28,47 @@ struct ProvisionQLApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_: NSApplication, open urls: [URL]) {
-        FileOpenRequests.shared.add(urls)
+        FileOpenRouter.shared.open(urls)
     }
 }
 
 /// Finder open events arrive on the app delegate, which has no access to the
-/// SwiftUI openWindow action. Requests are queued here and drained take-once
-/// by the first window that reacts, so each file opens exactly once.
+/// SwiftUI openWindow action. Windows register the action (and, while empty,
+/// a claim to be filled) here; before any window exists (cold launch) URLs
+/// wait in the queue and are drained by the first window to appear.
 @MainActor
-final class FileOpenRequests {
-    static let shared = FileOpenRequests()
-    static let notification = Notification.Name("ProvisionQLFileOpenRequests")
+final class FileOpenRouter {
+    static let shared = FileOpenRouter()
 
+    var openWindow: OpenWindowAction?
+    private var emptyWindowClaims: [UUID: (URL) -> Void] = [:]
     private var pendingURLs: [URL] = []
 
-    func add(_ urls: [URL]) {
-        pendingURLs.append(contentsOf: urls)
-        NotificationCenter.default.post(name: Self.notification, object: nil)
+    func setEmptyWindowClaim(id: UUID, claim: ((URL) -> Void)?) {
+        emptyWindowClaims[id] = claim
     }
 
-    func take() -> [URL] {
+    func open(_ urls: [URL]) {
+        var remaining = urls
+
+        // Fill an existing empty window before spawning new ones.
+        if let first = remaining.first, let (id, claim) = emptyWindowClaims.first {
+            emptyWindowClaims.removeValue(forKey: id)
+            claim(first)
+            remaining.removeFirst()
+        }
+
+        guard let openWindow else {
+            pendingURLs.append(contentsOf: remaining)
+            return
+        }
+
+        for url in remaining {
+            openWindow(value: url)
+        }
+    }
+
+    func takePending() -> [URL] {
         defer { pendingURLs.removeAll() }
         return pendingURLs
     }

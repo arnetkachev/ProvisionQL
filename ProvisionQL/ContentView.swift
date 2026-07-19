@@ -5,14 +5,14 @@
 //  Created by Evgeny Aleksandrov
 
 import AppKit
-import Combine
 import PreviewUI
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    let fileURL: URL?
+    @Binding var fileURL: URL?
     @State private var model = HostAppModel()
+    @State private var windowID = UUID()
     @Environment(\.openWindow) private var openWindow
     @AppStorage("extensionHintDismissed") private var extensionHintDismissed = false
     @State private var isDropTargeted = false
@@ -48,16 +48,24 @@ struct ContentView: View {
             )
         }
         .frame(minWidth: 720, minHeight: 520)
+        // Steers open events toward the window already showing that file (or
+        // an empty one) instead of spawning an extra scene; delivery itself
+        // happens through FileOpenRouter.
+        .handlesExternalEvents(
+            preferring: fileURL.map { [$0.absoluteString] } ?? [],
+            allowing: fileURL == nil ? ["*"] : []
+        )
+        .onAppear(perform: registerAndDrainFileOpens)
+        .onChange(of: fileURL) {
+            updateEmptyWindowClaim()
+        }
+        .onDisappear {
+            FileOpenRouter.shared.setEmptyWindowClaim(id: windowID, claim: nil)
+        }
         .task(id: fileURL) {
             if let fileURL {
                 await model.previewRequested(for: fileURL)
             }
-        }
-        .onAppear(perform: drainFileOpenRequests)
-        .onReceive(
-            NotificationCenter.default.publisher(for: FileOpenRequests.notification)
-        ) { _ in
-            drainFileOpenRequests()
         }
         .navigationTitle(model.windowTitle)
         .toolbar {
@@ -77,21 +85,30 @@ struct ContentView: View {
         extensionHintDismissed = true
     }
 
-    private func drainFileOpenRequests() {
-        var urls = FileOpenRequests.shared.take()
+    private func registerAndDrainFileOpens() {
+        let router = FileOpenRouter.shared
+        router.openWindow = openWindow
+        updateEmptyWindowClaim()
+
+        var urls = router.takePending()
         guard !urls.isEmpty else {
             return
         }
 
-        if !model.hasOpenedFile {
-            let first = urls.removeFirst()
-            Task {
-                await model.previewRequested(for: first)
-            }
+        if fileURL == nil {
+            fileURL = urls.removeFirst()
         }
 
         for url in urls {
             openWindow(value: url)
+        }
+    }
+
+    private func updateEmptyWindowClaim() {
+        if fileURL == nil {
+            FileOpenRouter.shared.setEmptyWindowClaim(id: windowID) { fileURL = $0 }
+        } else {
+            FileOpenRouter.shared.setEmptyWindowClaim(id: windowID, claim: nil)
         }
     }
 
@@ -108,9 +125,7 @@ struct ContentView: View {
             return
         }
 
-        Task {
-            await model.previewRequested(for: url)
-        }
+        fileURL = url
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
@@ -125,8 +140,8 @@ struct ContentView: View {
                 return
             }
 
-            Task {
-                await model.previewRequested(for: url)
+            Task { @MainActor in
+                fileURL = url
             }
         }
 
@@ -237,5 +252,5 @@ private struct EmptyStateView: View {
 }
 
 #Preview {
-    ContentView(fileURL: nil)
+    ContentView(fileURL: .constant(nil))
 }
