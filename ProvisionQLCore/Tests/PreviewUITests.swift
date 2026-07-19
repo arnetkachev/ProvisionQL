@@ -5,6 +5,17 @@ import Testing
 
 @Suite("Preview UI Tests")
 struct PreviewUITests {
+    @Test("App Store links require ASCII decimal IDs")
+    func appStoreURLValidation() {
+        #expect(
+            AppStoreMetadata(appStoreID: "6744585772").appStoreURL?.absoluteString
+                == "https://apps.apple.com/app/id6744585772"
+        )
+        #expect(AppStoreMetadata(appStoreID: "123?source=bad").appStoreURL == nil)
+        #expect(AppStoreMetadata(appStoreID: "１２３").appStoreURL == nil)
+        #expect(AppStoreMetadata(appStoreID: "").appStoreURL == nil)
+    }
+
     @Test("Unsupported files are rejected before profile parsing")
     @MainActor
     func unsupportedFileType() async throws {

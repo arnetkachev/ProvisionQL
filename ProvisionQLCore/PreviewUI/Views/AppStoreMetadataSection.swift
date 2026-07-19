@@ -12,7 +12,7 @@ struct AppStoreMetadataSection: View {
                     InfoRow(
                         label: "App Store ID",
                         value: appStoreID,
-                        link: URL(string: "https://apps.apple.com/app/id\(appStoreID)")
+                        link: metadata.appStoreURL
                     )
                 }
 
@@ -36,5 +36,18 @@ struct AppStoreMetadataSection: View {
                 }
             }
         }
+    }
+}
+
+extension AppStoreMetadata {
+    var appStoreURL: URL? {
+        guard let appStoreID,
+              !appStoreID.isEmpty,
+              appStoreID.allSatisfy({ $0.isASCII && $0.isNumber })
+        else {
+            return nil
+        }
+
+        return URL(string: "https://apps.apple.com/app/id\(appStoreID)")
     }
 }
