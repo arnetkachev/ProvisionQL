@@ -73,10 +73,12 @@ struct ContentView: View {
                 Button(action: openFile) {
                     Label("Open File", systemImage: "doc.badge.plus")
                 }
+                .help("Open a supported file")
 
                 Button(action: openExtensionSettings) {
                     Label("Extensions", systemImage: "puzzlepiece.extension")
                 }
+                .help("Open Extensions settings")
             }
         }
     }
