@@ -30,8 +30,8 @@ Open or drop a supported file into the app for the full inspector, or use Finder
 
 ## Installation
 
-1. Download the latest release from [Releases](https://github.com/ealeksandrov/ProvisionQL/releases/latest).
-2. Unzip the archive and move `ProvisionQL.app` to `/Applications`.
+1. Download the latest `ProvisionQL.dmg` from [Releases](https://github.com/ealeksandrov/ProvisionQL/releases/latest).
+2. Open the DMG and drag `ProvisionQL.app` to `/Applications`.
 3. Launch `ProvisionQL.app` once.
 4. If Finder previews do not appear, enable the Quick Look extensions in System Settings > Login Items & Extensions.
 
