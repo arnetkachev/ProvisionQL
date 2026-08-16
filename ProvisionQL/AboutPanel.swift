@@ -2,6 +2,7 @@ import AppKit
 
 enum AboutPanel {
     static let repositoryURL = URL(string: "https://github.com/ealeksandrov/ProvisionQL")!
+    static let privacyPolicyURL = URL(string: "https://github.com/ealeksandrov/ProvisionQL/blob/main/PRIVACY.md")!
 
     @MainActor
     static func show() {
@@ -14,14 +15,28 @@ enum AboutPanel {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
 
-        return NSAttributedString(
-            string: "GitHub",
-            attributes: [
-                .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
-                .foregroundColor: NSColor.linkColor,
-                .link: repositoryURL,
-                .paragraphStyle: paragraphStyle,
-            ]
-        )
+        let credits = NSMutableAttributedString()
+        for (title, url) in [("GitHub", repositoryURL), ("Privacy Policy", privacyPolicyURL)] {
+            if credits.length > 0 {
+                credits.append(NSAttributedString(
+                    string: "  ·  ",
+                    attributes: [
+                        .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+                        .foregroundColor: NSColor.secondaryLabelColor,
+                        .paragraphStyle: paragraphStyle,
+                    ]
+                ))
+            }
+            credits.append(NSAttributedString(
+                string: title,
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+                    .foregroundColor: NSColor.linkColor,
+                    .link: url,
+                    .paragraphStyle: paragraphStyle,
+                ]
+            ))
+        }
+        return credits
     }
 }
