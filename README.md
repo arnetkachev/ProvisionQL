@@ -59,4 +59,4 @@ Initially based on [Provisioning by Craig Hockenberry](https://github.com/chocke
 
 ## License
 
-`ProvisionQL` is available under the MIT license. See [LICENSE.md](LICENSE.md) for details.
+`ProvisionQL` is available under the MIT license. See [LICENSE.md](LICENSE.md) and the [privacy policy](PRIVACY.md).
